@@ -61,4 +61,3 @@ assets/img/           visuels extraits du Print & Play (fiches, cartes, Éclaire
 
 Jeu original, textes des questions, illustrations et plateau : **Numéville**, Institut du Numérique Responsable (INR),
 licence Creative Commons **CC BY-NC-ND 4.0** (attribution, pas d'utilisation commerciale, pas de modification).
-Cette adaptation est réalisée dans un cadre pédagogique (BUT Informatique, R3.03 Analyse) ; le contenu du jeu n'est pas modifié.
