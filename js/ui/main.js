@@ -54,7 +54,7 @@
       document.querySelectorAll('#niveaux button').forEach((x) => x.classList.toggle('choisi', x === b));
       majSeuils();
     }));
-    // Mode avancé : uniquement en niveau Standard ou Expert (règles, p. 11)
+    // Mode avancé : uniquement en niveau Standard ou Expert (comme le prévoient les règles)
     const cAvance = document.querySelector('#mode-avance');
     const bDecouverte = document.querySelector('#niveaux button[data-niveau="decouverte"]');
     cAvance.addEventListener('change', () => {

@@ -1,5 +1,5 @@
 /* =====================================================================
-   Numéville 3D — mode avancé : cartes Objet et Pouvoir (règles p. 11-12)
+   Numéville 3D — mode avancé : cartes Objet et Pouvoir
 
    • En début de partie, les joueurs choisissent une case Objet et une case Pouvoir.
    • Terminer son déplacement sur l'une d'elles fait piocher une carte, puis on joue
@@ -111,9 +111,10 @@ class ModeAvance {
   /** Demande au détenteur s'il joue sa carte maintenant. */
   async proposer(j, carte, type, question, oui = 'Utiliser', non = 'Pas maintenant') {
     const icone = type === 'objet' ? '🧰' : '⚡';
+    const reste = type === 'pouvoir' && j.pouvoir && j.pouvoir.carte === carte ? this.libelleReste(j.pouvoir) : null;
     const r = await this.ui.choisir(`${icone} ${carte.titre}`,
-      `<span class="carte-rappel">${carte.texte}</span><br><b>${j.nom}</b>, ${question}`,
-      [{ label: oui, valeur: true }, { label: non, valeur: false }]);
+      `<span class="carte-rappel">${carte.texte}</span><b>${j.nom}</b>, ${question}`,
+      [{ label: oui, valeur: true }, { label: non, valeur: false }], { type, carte, reste });
     return r;
   }
 
@@ -147,9 +148,7 @@ class ModeAvance {
 
       const actuelle = type === 'objet' ? j.objet : j.pouvoir && j.pouvoir.carte;
       if (actuelle) {
-        const garder = await this.ui.choisir(type === 'objet' ? 'Un seul Objet en main' : 'Un seul Pouvoir en main',
-          `${j.nom} a déjà <b>${actuelle.titre}</b>. Quelle carte garder ? L’autre est défaussée sans appliquer son effet.`,
-          [{ label: `Garder la nouvelle : ${carte.titre}`, valeur: 'nouvelle' }, { label: `Garder l’ancienne : ${actuelle.titre}`, valeur: 'ancienne' }]);
+        const garder = await this.ui.choisirCarteAGarder(type, carte, actuelle, j, type === 'pouvoir' ? this.libelleReste(j.pouvoir) : null);
         if (garder === 'ancienne') { this['defausse' + cle].push(carte); this.ui.log(`${this.tagJ(j)} garde ${actuelle.titre}.`); return; }
         this['defausse' + cle].push(actuelle);
       }

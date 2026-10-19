@@ -4,7 +4,7 @@
 
    moment     : quand la carte peut être jouée (utilisé par js/jeu/mode-avance.js)
    complice   : Complice concerné ; s'il est déjà sauvé ou perdu au moment
-                de la pioche, on reprend une carte (règle du livret, p. 12)
+                de la pioche, on reprend une carte (règle du livret)
    utilisations (Pouvoirs) : Infinity = tant que la carte est gardée,
                 'manche' = une fois par manche, sinon un nombre
    ===================================================================== */
@@ -68,6 +68,41 @@
       texte: 'Une seule fois dans la partie, quand un Complice devrait être perdu, vous pouvez retarder sa perte : retirez immédiatement 1 jeton mauvaise pratique de la fiche de ce Complice.' },
   ];
 
+
+  /* Fiches « En savoir plus » : quand jouer la carte, ce qu'elle fait, un conseil.
+     Rédigées pour être comprises sans connaître les règles du jeu de plateau. */
+  const DETAILS = {
+    // ---- Objets (usage unique : la carte est défaussée après usage) ----
+    parapluie: { quand: 'Juste après la révélation d’une carte « Dark Master – Attaque », pendant ton tour.', effet: 'La carte d’attaque est annulée : aucun de ses effets ne s’applique.', conseil: 'Garde-la pour une attaque qui ferait vraiment mal (par exemple un jeton mauvaise pratique sur un Complice presque perdu).' },
+    doubleverif: { quand: 'Juste après avoir lancé le dé noir.', effet: 'Tu relances le dé noir une fois, puis tu choisis lequel des deux résultats garder.', conseil: 'Utile pour éviter un 6 (attaque) ou pour viser une question facile (1 à 3).' },
+    gps: { quand: 'Au début de ton tour, à la place du dé blanc.', effet: 'Tu avances de 1, 2 ou 3 cases, au choix, dans le sens de ton choix.', conseil: 'Parfait pour atteindre une case précise toute proche : un face-à-face, la Place ou la case Pouvoir.' },
+    guidecyber: { quand: 'Juste après une mauvaise réponse à une question sur Hacker.', effet: 'Le jeton mauvaise pratique n’est pas placé sur la fiche de Hacker.', conseil: 'Encore plus précieux en face-à-face, où une erreur coûte normalement 2 jetons.' },
+    kit: { quand: 'Au début de ton tour, avant de te déplacer (Hyperco doit avoir au moins 1 jeton mauvaise pratique).', effet: 'Tu retires 1 jeton mauvaise pratique de la fiche d’Hyperco.', conseil: 'À jouer quand Hyperco approche du seuil où il serait perdu.' },
+    carnetbp: { quand: 'Juste après une bonne réponse (pas en face-à-face).', effet: 'Le Complice reçoit 1 jeton bonne pratique de plus : 2 au total pour cette réponse.', conseil: 'Idéal pour finir de sauver un Complice à qui il ne manque qu’un ou deux jetons.' },
+    loupe: { quand: 'Avant de piocher une question difficile sur Stalky.', effet: 'Tu pioches une question facile à la place.', conseil: 'Joue-la surtout en face-à-face avec Stalky : une question plus simple, un résultat doublé.' },
+    coffre: { quand: 'Quand une carte Dark Master veut retirer un jeton bonne pratique à Datata (n’importe quel joueur qui l’a peut la jouer).', effet: 'Datata garde son jeton bonne pratique.', conseil: 'Elle protège automatiquement les progrès faits sur Datata : garde-la tant que Datata n’est pas sauvé.' },
+    chargeur: { quand: 'À la fin de ton tour.', effet: 'Tu choisis un autre joueur : il joue un tour supplémentaire complet (dé blanc puis dé noir) avant la fin de la manche.', conseil: 'Choisis le joueur le mieux placé, par exemple à côté d’un face-à-face.' },
+    filtre: { quand: 'Quand tu es dans le quartier d’Hyperco, avant de répondre.', effet: 'Jusqu’à la fin de la manche, chaque question sur Hyperco donne au maximum 1 jeton mauvaise pratique, même en face-à-face ou avec le Brouillard.', conseil: 'Très utile si plusieurs joueurs vont passer par le quartier d’Hyperco pendant la manche.' },
+    indices: { quand: 'Avant de voir la question.', effet: 'Le groupe peut se concerter pendant 1 minute pour t’aider à répondre (un compte à rebours s’affiche sur la question).', conseil: 'Garde-la pour une question difficile ou un face-à-face.' },
+    capture: { quand: 'Juste après une mauvaise réponse, quel que soit le Complice.', effet: 'Le jeton mauvaise pratique n’est pas placé (aucun jeton, même en face-à-face).', conseil: 'La protection la plus souple : elle marche pour tous les Complices.' },
+    plan: { quand: 'Au début de ton tour, à la place du dé blanc.', effet: 'Tu vas directement sur la case de ton choix dans le quartier de ton choix (si elle est occupée, sur la suivante libre).', conseil: 'Le moyen le plus sûr d’atteindre un face-à-face ou la case Objet / Pouvoir.' },
+    // ---- Pouvoirs (restent en main tant qu'on les garde) ----
+    ambassadeur: { quand: 'Automatique, à chaque face-à-face raté.', effet: 'Une mauvaise réponse en face-à-face ne donne qu’1 jeton mauvaise pratique au lieu de 2.', conseil: 'Ose les face-à-face : le risque est réduit de moitié.' },
+    gardien: { quand: 'Automatique, après une bonne réponse sur Datata (une fois par tour).', effet: 'Datata reçoit 1 jeton bonne pratique de plus.', conseil: 'Va souvent dans le quartier de Datata pour en profiter.' },
+    decodeur: { quand: 'Juste après avoir lancé le dé noir pour une question sur Stalky.', effet: 'Tu relances le dé noir et gardes le nouveau résultat.', conseil: 'Utilise-le pour échapper à un 6 (attaque) ou à une question difficile.' },
+    maitredes: { quand: 'Une fois par manche, juste après un lancer de dé blanc ou de dé noir.', effet: 'Tu ajoutes +1 ou −1 au résultat (entre 1 et 6).', conseil: 'Au dé blanc pour tomber pile sur une case ; au dé noir pour transformer un 4 en 3 (question facile) ou un 6 en 5 (pas d’attaque).' },
+    bouclier: { quand: 'Quand tu fais 6 au dé noir, avant que la carte d’attaque soit piochée.', effet: 'Aucune carte d’attaque n’est piochée.', conseil: 'Contrairement au Parapluie, tu décides sans connaître l’attaque.' },
+    eclaireur: { quand: 'À chacun de tes tours, à la place du dé blanc.', effet: 'Tu peux avancer de 2 cases sans lancer le dé blanc.', conseil: 'Pratique pour rester dans un quartier ou viser une case précise.' },
+    coach: { quand: 'Juste après une bonne réponse à une question difficile.', effet: 'Au choix : 1 jeton bonne pratique en plus pour ce Complice, ou 1 de ses jetons mauvaise pratique retourné en bonne pratique.', conseil: 'Retourner un jeton est le plus fort : le Complice perd 1 mauvaise pratique et gagne 1 bonne.' },
+    relais: { quand: 'À la fin de ton tour.', effet: 'Tu désignes un autre joueur : à son prochain tour, il pourra aller directement sur la case de son choix.', conseil: 'Donne-le au joueur qui doit rejoindre un quartier éloigné.' },
+    veilleur: { quand: 'À la fin de chaque manche, avant que la carte « Fin de manche » soit révélée.', effet: 'Tu découvres la prochaine carte et choisis de la laisser sur la pioche ou de la glisser dessous.', conseil: 'Écarte les cartes dangereuses et garde les bonnes, comme Mobilisation citoyenne.' },
+    reparcafe: { quand: 'À la fin de ton tour.', effet: 'Tu retires 1 jeton mauvaise pratique du Complice de ton choix.', conseil: 'Vise le Complice le plus proche d’être perdu.' },
+    mediateur: { quand: 'Automatique, après chaque bonne réponse sur Stalky.', effet: 'Tu places 1 jeton bonne pratique en plus sur Stalky ou sur un autre Complice pas encore sauvé.', conseil: 'Sers-t’en pour aider le Complice qui en a le plus besoin, pas forcément Stalky.' },
+    cyberpatrouille: { quand: 'Juste après ton déplacement.', effet: 'Tu réponds à la question d’un autre Complice que celui de ton quartier.', conseil: 'Pour viser le Complice qui a besoin d’aide sans avoir à te déplacer jusqu’à lui.' },
+    memoire: { quand: 'Au moment où un Complice devrait être perdu (n’importe quel joueur qui l’a peut le jouer).', effet: 'Le Complice n’est pas perdu : on retire 1 jeton mauvaise pratique de sa fiche.', conseil: 'Une seconde chance unique : ne la gaspille pas.' },
+  };
+
+  for (const carte of [...OBJETS, ...POUVOIRS]) carte.details = DETAILS[carte.id];
   NV.OBJETS = OBJETS;
   NV.POUVOIRS = POUVOIRS;
 })();

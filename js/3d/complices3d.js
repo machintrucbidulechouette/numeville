@@ -110,16 +110,19 @@ class Complices3D {
         sauve: sources[id] ? this.chargerTexture(sources[id].sauve) : null,
         perdu: sources[id] ? this._texPerdu(sources[id].actif) : null,
       };
-      const matBuste = new THREE.MeshBasicMaterial({ map: tex.actif, transparent: true, opacity: 0.92, side: THREE.DoubleSide, depthWrite: false, toneMapped: false });
+      // Hologramme dessiné indépendamment de la profondeur : un pion posé devant ne le coupe jamais
+      // (le portrait des pions, dessiné après, reste lui au-dessus du buste).
+      const matBuste = new THREE.MeshBasicMaterial({ map: tex.actif, transparent: true, opacity: 0.92, side: THREE.DoubleSide, depthWrite: false, depthTest: false, toneMapped: false });
       const buste = new THREE.Mesh(new THREE.PlaneGeometry(1.12, 0.84), matBuste);
       buste.renderOrder = 2;
-      const matScan = new THREE.MeshBasicMaterial({ map: scan, color: c.couleurClaire, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+      const matScan = new THREE.MeshBasicMaterial({ map: scan, color: c.couleurClaire, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false, side: THREE.DoubleSide });
       const balayage = new THREE.Mesh(new THREE.PlaneGeometry(1.12, 0.84), matScan);
       balayage.position.z = 0.002; balayage.renderOrder = 3;
       pivot.add(buste, balayage);
       groupe.add(pivot);
 
-      const embleme = new THREE.Sprite(new THREE.SpriteMaterial({ map: this._embleme(id, c.couleur), transparent: true }));
+      const embleme = new THREE.Sprite(new THREE.SpriteMaterial({ map: this._embleme(id, c.couleur), transparent: true, depthTest: false }));
+      embleme.renderOrder = 4;
       embleme.scale.setScalar(0.34);
       embleme.position.y = 1.36;
       groupe.add(embleme);

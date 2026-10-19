@@ -45,5 +45,33 @@ body.cinema #main-joueur { opacity: 0; pointer-events: none; }
 .concertation.fini { background: #fff3e0; color: #7a4a00; }
 
 @media (max-width: 760px) {
-  #main-joueur { bottom: 196px; }
+  #main-joueur { bottom: 128px; max-width: calc(100% - 12px); gap: 5px; }
+  .puce-carte { padding: 5px 10px; font-size: 12.5px; }
 }
+
+/* « En savoir plus » et fiche détaillée d'une carte */
+.savoir-plus { display: inline-flex; align-items: center; gap: 4px; margin: 0 0 6px; padding: 6px 12px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent); background: transparent; color: var(--accent); font-size: 13.5px; font-weight: 600; }
+.savoir-plus:hover, .savoir-plus:focus-visible { background: color-mix(in srgb, var(--accent) 16%, transparent); color: #ffffff; }
+.dm-face .savoir-plus { align-self: center; margin: 8px 0 0; color: #0b5d75; border-color: #0b5d75; }
+.dm-face .savoir-plus:hover, .dm-face .savoir-plus:focus-visible { background: #e3f6fb; color: #063d4e; }
+.carte-rappel + b { display: block; margin-top: 2px; }
+
+.fiche-carte .fc-type { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--doux) !important; }
+.fiche-carte h2 { margin: 2px 0 10px; }
+.fiche-carte blockquote { margin: 0 0 14px; padding: 10px 14px; border-radius: 10px; background: #0a0f26; border-left: 3px solid #38e1ff; color: #d7dcf3; font-size: 14px; line-height: 1.5; }
+.fiche-carte.pouvoir blockquote { border-left-color: #b98cff; }
+.fiche-carte dl { display: grid; gap: 10px; margin: 0 0 16px; }
+.fiche-carte dl div { display: grid; gap: 2px; }
+.fiche-carte dt { font-family: var(--titre); font-weight: 700; font-size: 15px; color: #ffffff; }
+.fiche-carte dd { margin: 0; color: #d7dcf3; font-size: 14px; line-height: 1.5; }
+.fiche-carte dd b { color: #c9bcff; }
+
+/* choisir la carte à garder */
+.choix-cartes { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 12px; }
+.mini-carte { display: flex; flex-direction: column; gap: 6px; padding: 14px; border-radius: 14px; background: #0a0f26; border: 1px solid #38e1ff; min-width: 0; }
+.mini-carte.pouvoir { border-color: #b98cff; }
+.mini-carte .etiquette { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--doux); }
+.mini-carte h3 { margin: 0; font-family: var(--titre); font-size: 18px; color: #ffffff; }
+.mini-carte p { margin: 0; font-size: 13.5px; line-height: 1.45; color: #d7dcf3; }
+.mini-carte .savoir-plus { align-self: flex-start; margin-top: 4px; }
+.mini-carte .btn { margin-top: auto; }

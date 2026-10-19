@@ -110,6 +110,7 @@ class Plateau3D {
     this._complices3D();
 
     window.addEventListener('resize', () => this.redimensionner());
+    this.redimensionner();
     r.setAnimationLoop((temps) => this._boucle(temps));
   }
 
@@ -304,6 +305,7 @@ class Plateau3D {
     groupe.add(corps, tete);
     const portrait = new THREE.Sprite(new THREE.SpriteMaterial({ map: this._portrait(e), depthTest: true }));
     portrait.scale.set(0.62, 0.62, 1);
+    portrait.renderOrder = 6; // toujours dessiné après les hologrammes des Complices
     portrait.position.y = 1.12;
     groupe.add(portrait);
     groupe.userData.portrait = portrait;
@@ -576,6 +578,8 @@ class Plateau3D {
   redimensionner() {
     const w = this.conteneur.clientWidth, h = this.conteneur.clientHeight;
     this.camera.aspect = w / h;
+    // Écran en portrait (téléphone) : on élargit le champ vertical pour garder tout le plateau visible
+    this.camera.fov = this.camera.aspect < 1 ? Math.min(68, 40 / Math.max(this.camera.aspect, 0.45) * 0.62) : 40;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);
   }

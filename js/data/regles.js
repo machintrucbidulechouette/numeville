@@ -75,7 +75,7 @@
     hakim: { id: 'hakim', nom: 'Hakim', couleur: '#ff6b5a', desc: 'Il puise son courage dans son sens de la justice pour rétablir l’ordre dans Numéville.' },
   };
 
-  /* Seuils [jetons bleus pour sauver, jetons rouges pour perdre] (page 10 des règles) */
+  /* Seuils [jetons bleus pour sauver, jetons rouges pour perdre] selon le nombre de joueurs et le niveau */
   const SEUILS = {
     2: { decouverte: [3, 4], standard: [4, 4], expert: [5, 3] },
     3: { decouverte: [3, 4], standard: [4, 4], expert: [5, 3] },

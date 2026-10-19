@@ -16,7 +16,7 @@ Si besoin, on peut aussi servir le dossier : `python3 -m http.server` puis http:
 ## Ce qui est implémenté (règles du jeu de base)
 
 - 2 à 4 joueurs en local (même écran), choix des Éclaireurs (Ana, Tom, Emily, Hakim) et du niveau
-  (Découverte / Standard / Expert, avec les seuils de jetons du tableau de la page 10).
+  (Découverte / Standard / Expert, avec les seuils de jetons prévus par les règles).
 - Plateau 3D texturé avec le plateau officiel : 15 cases en boucle, 4 cases départ, portraits des Complices, la Place.
 - Premier joueur désigné au dé blanc, puis sens horaire.
 - **Dé blanc** : déplacement exact, choix du sens (aperçu des 2 destinations), case occupée → prochaine case libre.
@@ -55,7 +55,7 @@ Si besoin, on peut aussi servir le dossier : `python3 -m http.server` puis http:
 - Les animations sont réduites si le système le demande (« réduire les animations »).
 - Contrastes des boutons vérifiés au repos, au survol et au focus (WCAG AA).
 
-### Mode avancé (cartes Objet et Pouvoir, règles p. 11-12)
+### Mode avancé (cartes Objet et Pouvoir)
 
 À activer sur l'écran d'accueil (niveau Standard ou Expert uniquement).
 - En début de partie, les joueurs choisissent une **case Objet** 🧰 et une **case Pouvoir** ⚡ (ou au hasard) ; elles sont signalées sur le plateau 3D.

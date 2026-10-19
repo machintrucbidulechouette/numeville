@@ -31,7 +31,8 @@ class Interface {
         if (e.key === ' ' || e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); this.plateau && this.plateau.passerCinematique(); }
         return;
       }
-      if ($('#aide').classList.contains('ouverte') || $('#accueil:not(.cache)')) return;
+      if ($('#aide').classList.contains('ouverte')) { if (e.key === 'Escape') this.fermerAide(); return; }
+      if ($('#accueil:not(.cache)')) return;
       if (e.key === ' ' || e.key === 'Enter') {
         const zone = this.modale.classList.contains('ouverte') ? this.modale : this.zoneActions;
         const b = zone.querySelector('.btn.principal:not([disabled])');
@@ -170,9 +171,11 @@ class Interface {
   }
   fermer() { this.modale.classList.remove('ouverte'); this.modale.innerHTML = ''; }
 
-  choisir(titre, texte, options) {
+  /** @param {{type:string, carte:object, reste?:string}} [info] carte à expliquer (bouton « En savoir plus ») */
+  choisir(titre, texte, options, info) {
     return new Promise((resolve) => {
       const c = el('div', {}, `<h2>${titre}</h2><p>${texte}</p>`);
+      if (info) c.appendChild(this._boutonSavoirPlus(info.type, info.carte, info.reste));
       const liste = el('div', { class: 'choix' });
       options.forEach((o, i) => liste.appendChild(el('button', {
         class: `btn option ${i === 0 ? 'principal' : ''}`, disabled: !!o.desactive,
@@ -180,6 +183,39 @@ class Interface {
       }, o.label)));
       c.appendChild(liste);
       this.ouvrir(c, 'petite');
+    });
+  }
+
+  _boutonSavoirPlus(type, carte, reste) {
+    return el('button', { class: 'savoir-plus', type: 'button', onclick: (e) => { e.stopPropagation(); this.montrerCarteInfo(type, carte, reste); } },
+      'En savoir plus <span aria-hidden="true">›</span>');
+  }
+
+  /** Utilisation d'une carte, en clair. */
+  static usageCarte(type, carte) {
+    if (type === 'objet') return 'Usage unique : la carte est défaussée après avoir été jouée.';
+    if (carte.utilisations === Infinity) return 'Permanent : l’effet dure tant que tu gardes la carte.';
+    if (carte.utilisations === 'manche') return 'Une fois par manche, tant que tu gardes la carte.';
+    return `${carte.utilisations} fois dans la partie, puis la carte est défaussée.`;
+  }
+
+  /**
+   * Quand une carte est piochée alors qu'on en a déjà une du même type :
+   * les deux cartes côte à côte, chacune avec « En savoir plus » et « Garder celle-ci ».
+   */
+  choisirCarteAGarder(type, nouvelle, ancienne, joueur, resteAncienne) {
+    return new Promise((resolve) => {
+      const c = el('div', {}, `<h2>${type === 'objet' ? '🧰 Un seul Objet en main' : '⚡ Un seul Pouvoir en main'}</h2>
+        <p>${joueur.nom}, tu ne peux garder qu’une carte ${type === 'objet' ? 'Objet' : 'Pouvoir'}. L’autre est défaussée sans appliquer son effet.</p>`);
+      const grille = el('div', { class: 'choix-cartes' });
+      for (const [carte, cle, etiquette, reste] of [[nouvelle, 'nouvelle', 'Nouvelle carte', null], [ancienne, 'ancienne', 'Carte actuelle', resteAncienne]]) {
+        const bloc = el('div', { class: `mini-carte ${type}` }, `<span class="etiquette">${etiquette}</span><h3>${carte.titre}</h3><p>${carte.texte}</p>${reste ? `<p class="usage">${reste}</p>` : ''}`);
+        bloc.appendChild(this._boutonSavoirPlus(type, carte, reste || Interface.usageCarte(type, carte)));
+        bloc.appendChild(el('button', { class: `btn ${cle === 'nouvelle' ? 'principal' : ''}`, onclick: () => { this.fermer(); resolve(cle); } }, 'Garder celle-ci'));
+        grille.appendChild(bloc);
+      }
+      c.appendChild(grille);
+      this.ouvrir(c, 'large');
     });
   }
 
@@ -289,6 +325,7 @@ class Interface {
           <div class="dm-illu" style="background-image:url(${IMG}dos-${type}.jpg)"></div>
         </div>`);
       const b = el('button', { class: 'btn principal', onclick: () => { this.fermer(); resolve(); } }, note ? 'Reprendre une carte' : 'Prendre la carte');
+      if (!note) $('.dm-face', c).appendChild(this._boutonSavoirPlus(type, carte, Interface.usageCarte(type, carte)));
       $('.dm-face', c).appendChild(b);
       this.ouvrir(c, 'dm');
       setTimeout(() => { c.classList.add('retournee'); if (window.NV_AUDIO) NV_AUDIO.effet('retourne'); }, 60);
@@ -306,7 +343,7 @@ class Interface {
     zone.appendChild(el('span', { class: 'main-titre' }, `Cartes de ${j.nom}`));
     if (j.objet) {
       const o = j.objet;
-      zone.appendChild(el('button', { class: 'puce-carte objet', title: o.texte, onclick: () => this.montrerCarteInfo('objet', o, 'Usage unique') }, `🧰 ${o.titre}`));
+      zone.appendChild(el('button', { class: 'puce-carte objet', title: o.texte, onclick: () => this.montrerCarteInfo('objet', o) }, `🧰 ${o.titre}`));
     }
     if (j.pouvoir) {
       const p = j.pouvoir;
@@ -316,13 +353,28 @@ class Interface {
   }
 
   /** Relire une carte de sa main (couche d'aide : n'interrompt pas l'action en cours). */
+  /** Fiche « En savoir plus » : quand jouer la carte, effet, utilisation, conseil (couche d'aide, n'interrompt rien). */
   montrerCarteInfo(type, carte, reste) {
     const couche = $('#aide');
     couche.innerHTML = '';
-    const boite = el('div', { class: 'boite petite' }, `<h2>${type === 'objet' ? '🧰' : '⚡'} ${carte.titre}</h2><p>${carte.texte}</p><p class="usage">${reste}</p>`);
-    boite.appendChild(el('button', { class: 'btn principal', onclick: () => this.fermerAide() }, 'Fermer'));
+    const d = carte.details || {};
+    // nombre d'utilisations restantes affiché seulement pour un pouvoir déjà en main et limité (ex. « 1 utilisation »)
+    const usage = reste && /\d/.test(reste) && !/fois par manche/.test(reste) ? `${Interface.usageCarte(type, carte)} <b>Il te reste : ${reste}.</b>` : Interface.usageCarte(type, carte);
+    const boite = el('div', { class: `boite petite fiche-carte ${type}` }, `
+      <p class="fc-type">${type === 'objet' ? '🧰 Carte Objet' : '⚡ Carte Pouvoir'}</p>
+      <h2>${carte.titre}</h2>
+      <blockquote>${carte.texte}</blockquote>
+      <dl>
+        <div><dt>🕑 Quand la jouer</dt><dd>${d.quand || '—'}</dd></div>
+        <div><dt>✨ Ce qu’elle fait</dt><dd>${d.effet || carte.texte}</dd></div>
+        <div><dt>🔁 Utilisation</dt><dd>${usage}</dd></div>
+        ${d.conseil ? `<div><dt>💡 Conseil</dt><dd>${d.conseil}</dd></div>` : ''}
+      </dl>`);
+    const fermer = el('button', { class: 'btn principal', onclick: () => this.fermerAide() }, 'Fermer');
+    boite.appendChild(fermer);
     couche.appendChild(boite);
     couche.classList.add('ouverte');
+    fermer.focus({ preventScroll: true });
   }
 
   carteDM(type, carte, note) {
