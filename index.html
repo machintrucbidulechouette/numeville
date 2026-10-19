@@ -43,7 +43,7 @@
     <nav class="hud-outils">
       <button id="btn-vue" class="icone" title="Recentrer la vue">🎯</button>
       <button id="btn-cine" class="icone" title="Cinématiques activées" aria-pressed="true">🎬</button>
-      <button id="btn-son" class="icone" title="Son">🔊</button>
+      <button id="btn-son" class="icone" title="Réglages du son" aria-haspopup="dialog" aria-controls="panneau-audio">🔊</button>
       <button id="btn-journal" class="icone" title="Journal">📜</button>
       <button id="btn-regles" class="icone" title="Aide de jeu">?</button>
     </nav>
@@ -94,12 +94,29 @@
       </div>
 
       <div class="accueil-actions">
+        <button id="btn-son-accueil" class="btn" aria-haspopup="dialog" aria-controls="panneau-audio">🔊 Son</button>
         <button id="btn-regles-accueil" class="btn">Aide de jeu</button>
         <button id="btn-jouer" class="btn principal">Lancer la partie</button>
       </div>
       <p class="credits">D’après le jeu de plateau <b>Numéville</b> de l’Institut du Numérique Responsable (CC BY-NC-ND 4.0).</p>
     </div>
   </section>
+
+  <!-- Réglages du son -->
+  <div id="panneau-audio" role="dialog" aria-modal="false" aria-labelledby="titre-audio" hidden>
+    <div class="pa-tete">
+      <h2 id="titre-audio">Son</h2>
+      <button type="button" class="icone" id="fermer-audio" title="Fermer" aria-label="Fermer les réglages du son">✕</button>
+    </div>
+    <label class="pa-ligne" for="vol-general"><span>Volume général</span><output id="val-general">80 %</output></label>
+    <input type="range" id="vol-general" min="0" max="100" step="5">
+    <label class="pa-ligne" for="vol-musique"><span>Musique</span><output id="val-musique">45 %</output></label>
+    <input type="range" id="vol-musique" min="0" max="100" step="5">
+    <label class="pa-ligne" for="vol-effets"><span>Effets sonores</span><output id="val-effets">85 %</output></label>
+    <input type="range" id="vol-effets" min="0" max="100" step="5">
+    <label class="pa-muet" for="son-muet"><input type="checkbox" id="son-muet"> Couper tout le son <kbd>M</kbd></label>
+    <p class="pa-note">Musique et effets sont générés en direct par le navigateur : aucun fichier audio n’est téléchargé.</p>
+  </div>
 
   <!-- Bandes cinéma des cinématiques -->
   <div id="cinema" aria-live="polite">
@@ -119,6 +136,7 @@
   <script src="js/data/textures.js"></script>
   <script src="js/data/board-texture.js"></script>
   <!-- Code du jeu -->
+  <script src="js/audio.js"></script>
   <script src="js/plateau3d.js"></script>
   <script src="js/jeu.js"></script>
   <script src="js/interface.js"></script>

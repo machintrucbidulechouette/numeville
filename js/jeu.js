@@ -63,9 +63,19 @@ class Jeu {
   actifs(filtre = () => true) { return NV.ORDRE_COMPLICES.filter((id) => this.complices[id].statut === 'actif' && filtre(this.complices[id], id)); }
   compte(statut) { return NV.ORDRE_COMPLICES.filter((id) => this.complices[id].statut === statut).length; }
   sync() {
+    if (!this.fin && window.NV_AUDIO) NV_AUDIO.definirFond(this.ambianceDeFond());
     this.plateau.majJetons(this.complices);
     this.plateau.majPioches(this.piocheFin.length, Math.min(this.piocheAttaque.length, 15));
     this.ui.majHUD(this);
+  }
+
+  /* ===================== audio ===================== */
+  son(nom, opt) { if (window.NV_AUDIO) NV_AUDIO.effet(nom, opt); }
+  ambiance(nom, mesures) { if (window.NV_AUDIO) NV_AUDIO.changerAmbiance(nom, mesures); }
+  /** La musique se tend quand Numéville est en danger : un Complice perdu, ou à un jeton de l'être. */
+  ambianceDeFond() {
+    const danger = this.compte('perdu') > 0 || this.actifs((e) => e.rouges >= this.seuilRouge - 1).length > 0;
+    return danger ? 'tension' : 'calme';
   }
 
   /* ===================== cinématiques ===================== */
@@ -120,6 +130,8 @@ class Jeu {
       ? `✨ ${this.tagC(id)} est <b>SAUVÉ</b> : il redevient ${NV.COMPLICES[id].sauveNom} !`
       : `💀 ${this.tagC(id)} est <b>PERDU</b> : il bascule définitivement du côté obscur.`);
     const cp = NV.COMPLICES[id];
+    this.son(nouveau === 'sauve' ? 'sauve' : 'perdu');
+    if (nouveau === 'sauve') this.ambiance('lumineux', 2);
     await this.cine(() => this.plateau.cineComplice(id, nouveau),
       nouveau === 'sauve' ? `${cp.nom} est libéré·e !` : `${cp.nom} est perdu…`,
       nouveau === 'sauve' ? `Les bonnes pratiques ont eu raison du Dark Master : ${cp.nom} redevient ${cp.sauveNom}.` : 'Trop de mauvaises pratiques : il bascule définitivement du côté obscur.',
@@ -194,6 +206,8 @@ class Jeu {
     for (const j of this.joueurs) { this.plateau.creerPion(j); this.plateau.placerPion(j); }
     this.ui.log(`🏙️ Bienvenue à Numéville ! Niveau <b>${NV.NIVEAUX[this.niveau]}</b> : un Complice est sauvé à <b>${this.seuilBleu}</b> 🔵 et perdu à <b>${this.seuilRouge}</b> 🔴.`);
 
+    this.son('intro');
+    if (window.NV_AUDIO) NV_AUDIO.demarrerMusique();
     await this.cine(() => this.plateau.cineIntro(), 'Numéville',
       'Le Dark Master et ses 4 Complices ont pris le contrôle de la ville. Éclaireurs, à vous de jouer !', '#38e1ff');
 
@@ -217,6 +231,8 @@ class Jeu {
     }
     this.plateau.cacherDestinations();
     const gagne = this.fin.type !== 'defaite';
+    this.son(gagne ? 'victoire' : 'defaite');
+    this.ambiance(gagne ? 'lumineux' : 'sombre');
     await this.cine(() => this.plateau.cineFin(gagne),
       gagne ? (this.fin.type === 'totale' ? 'Numéville est libérée !' : 'Numéville résiste !') : 'Le Dark Master l’emporte…',
       gagne ? 'Les Éclaireurs ont propagé les bonnes pratiques dans toute la ville.' : 'La ville reste sous son emprise. La prochaine fois sera la bonne !',
@@ -296,6 +312,7 @@ class Jeu {
     const face = caseJ.type === 'face';
     if (face) {
       this.ui.log(`⚔️ Face-à-face avec ${this.tagC(id)} : le résultat de la question compte double !`);
+      this.son('face');
       await this.cine(() => this.plateau.cineFaceAFace(j, id), `Face-à-face avec ${this.nomC(id)}`,
         'Le résultat de cette question comptera double.', NV.COMPLICES[id].couleur);
       await this.retourVue();
@@ -319,6 +336,8 @@ class Jeu {
     if (this.fin) return;
 
     if (d === 6) {
+      this.son('attaque');
+      this.ambiance('tension', 2);
       await this.cine(() => this.plateau.cineAttaque(), 'Le Dark Master attaque !',
         `${j.nom} a fait 6 au dé noir : une carte Attaque est révélée.`, '#ff3a44');
       await this.attaque(j, id);
@@ -357,6 +376,7 @@ class Jeu {
     this.ui.log(`<b>Fin de la manche ${this.manche}</b> : le Dark Master révèle une carte.`);
     await this.ui.action(`Fin de la manche ${this.manche} : on révèle une carte « Dark Master – Fin de manche ».`, [{ label: '🃏 Révéler la carte', valeur: 1, principal: true, raccourci: ' ' }]);
     if (this.piocheFin.length) {
+      this.son('finManche');
       await this.cine(() => this.plateau.cineFinManche(), `Fin de la manche ${this.manche}`,
         `Le Dark Master révèle une carte. Il en reste ${this.piocheFin.length} dans la pioche.`, '#ffd23f');
     }

@@ -389,3 +389,24 @@ body.cinema #hud, body.cinema #fiches, body.cinema #journal, body.cinema #action
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* =====================================================================
+   Réglages du son
+   ===================================================================== */
+#panneau-audio {
+  position: fixed; z-index: 30; top: calc(76px + env(safe-area-inset-top, 0px)); right: max(16px, env(safe-area-inset-right, 0px));
+  width: min(320px, calc(100% - 32px)); padding: 16px 18px 14px;
+  background: var(--panneau-plein); color: var(--texte); border: 1px solid var(--bord); border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(0,0,0,.55); display: grid; gap: 6px; animation: monte .25s ease-out;
+}
+#panneau-audio[hidden] { display: none; }
+.pa-tete { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.pa-tete h2 { margin: 0; font-family: var(--titre); font-size: 20px; }
+.pa-ligne { display: flex; justify-content: space-between; font-size: 13.5px; color: var(--texte); margin-top: 6px; }
+.pa-ligne output { color: var(--accent); font-variant-numeric: tabular-nums; font-weight: 600; }
+#panneau-audio input[type="range"] { width: 100%; accent-color: var(--accent); height: 22px; cursor: pointer; }
+.pa-muet { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 14px; cursor: pointer; }
+.pa-muet input { width: 18px; height: 18px; accent-color: var(--accent); }
+.pa-muet kbd { margin-left: auto; font-family: var(--corps); font-size: 11px; padding: 2px 6px; border-radius: 5px; border: 1px solid var(--bord); color: var(--doux); }
+.pa-note { margin: 8px 0 0; font-size: 11.5px; color: var(--doux); line-height: 1.4; }
+body:not(.en-jeu) #panneau-audio { top: calc(16px + env(safe-area-inset-top, 0px)); }

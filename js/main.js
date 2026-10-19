@@ -57,6 +57,71 @@
     rendreJoueurs();
   }
 
+  /* ---------------- son : réglages et déverrouillage ---------------- */
+  function initAudio() {
+    const A = window.NV_AUDIO;
+    const panneau = document.querySelector('#panneau-audio');
+    const bSon = document.querySelector('#btn-son');
+    const champs = ['general', 'musique', 'effets'];
+    const majIcone = () => {
+      const muet = A.reglages.muet || A.reglages.general === 0;
+      bSon.textContent = muet ? '🔇' : '🔊';
+      bSon.title = muet ? 'Son coupé — réglages du son' : 'Réglages du son';
+    };
+    for (const k of champs) {
+      const input = document.querySelector('#vol-' + k), out = document.querySelector('#val-' + k);
+      input.value = Math.round(A.reglages[k] * 100);
+      out.textContent = input.value + ' %';
+      input.addEventListener('input', () => {
+        out.textContent = input.value + ' %';
+        A.deverrouiller();
+        A.regler(k, input.value / 100);
+        if (k === 'effets') A.effet('jetonBleu'); // aperçu du volume des effets
+        majIcone();
+      });
+    }
+    const muet = document.querySelector('#son-muet');
+    muet.checked = A.reglages.muet;
+    muet.addEventListener('change', () => { A.regler('muet', muet.checked); majIcone(); });
+    majIcone();
+
+    let ouvreur = null;
+    const ouvrir = (e) => {
+      ouvreur = e.currentTarget;
+      panneau.hidden = !panneau.hidden;
+      if (!panneau.hidden) document.querySelector('#vol-general').focus();
+    };
+    const fermer = () => { panneau.hidden = true; if (ouvreur) ouvreur.focus(); };
+    bSon.addEventListener('click', ouvrir);
+    document.querySelector('#btn-son-accueil').addEventListener('click', ouvrir);
+    document.querySelector('#fermer-audio').addEventListener('click', fermer);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !panneau.hidden) { fermer(); e.stopPropagation(); }
+      if ((e.key === 'm' || e.key === 'M') && e.target.tagName !== 'INPUT') {
+        muet.checked = !muet.checked; A.regler('muet', muet.checked); majIcone();
+      }
+    });
+    document.addEventListener('pointerdown', (e) => {
+      if (!panneau.hidden && !panneau.contains(e.target) && e.target !== bSon && e.target.id !== 'btn-son-accueil') panneau.hidden = true;
+    });
+
+    // Les navigateurs n'autorisent le son qu'après une action de l'utilisateur :
+    // au premier clic ou à la première touche, on démarre l'audio et la musique d'ambiance.
+    const premierGeste = () => {
+      A.deverrouiller();
+      A.demarrerMusique();
+      window.removeEventListener('pointerdown', premierGeste);
+      window.removeEventListener('keydown', premierGeste);
+    };
+    window.addEventListener('pointerdown', premierGeste);
+    window.addEventListener('keydown', premierGeste);
+
+    // petit clic sonore sur les boutons
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('button, .option') && !e.target.closest('#panneau-audio')) A.effet('clic');
+    });
+  }
+
   function demarrer() {
     if (!window.THREE || !window.NV_ADDONS) return;
     const ui = new Interface();
@@ -81,8 +146,7 @@
     document.querySelector('#btn-regles').addEventListener('click', () => ui.regles());
     document.querySelector('#btn-regles-accueil').addEventListener('click', () => ui.regles());
     document.querySelector('#btn-vue').addEventListener('click', () => plateau.vueDefaut());
-    const bSon = document.querySelector('#btn-son');
-    bSon.addEventListener('click', () => { plateau.muet = !plateau.muet; bSon.textContent = plateau.muet ? '🔇' : '🔊'; });
+    initAudio();
     document.querySelector('#btn-journal').addEventListener('click', () => document.body.classList.toggle('journal-ouvert'));
 
     document.querySelector('#btn-jouer').addEventListener('click', () => {

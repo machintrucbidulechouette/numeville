@@ -247,7 +247,8 @@ class Interface {
         retour.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       };
       this.ouvrir(carte, 'large');
-    });
+      if (window.NV_AUDIO) NV_AUDIO.attenuer(true);
+    }).then((bon) => { if (window.NV_AUDIO) NV_AUDIO.attenuer(false); return bon; });
   }
 
   carteDM(type, carte, note) {
@@ -264,7 +265,7 @@ class Interface {
       const b = el('button', { class: 'btn principal', onclick: () => { this.fermer(); resolve(); } }, note ? 'Reprendre une carte' : 'Appliquer l’effet');
       $('.dm-face', c).appendChild(b);
       this.ouvrir(c, 'dm');
-      setTimeout(() => c.classList.add('retournee'), 60);
+      setTimeout(() => { c.classList.add('retournee'); if (window.NV_AUDIO) NV_AUDIO.effet('retourne'); }, 60);
       setTimeout(() => b.focus({ preventScroll: true }), 400);
     });
   }

@@ -36,6 +36,14 @@ Si besoin, on peut aussi servir le dossier : `python3 -m http.server` puis http:
   Elles se passent d'un clic ou avec Espace, et se coupent avec le bouton 🎬 (choix mémorisé).
 - **Animations de retour** : jetons qui tombent sur le plateau et sur les fiches, fiche qui s'illumine
   à chaque jeton, résultat du dé affiché au-dessus du dé.
+- **Musique d'ambiance générative** (synthwave « ville numérique la nuit ») qui suit la partie :
+  calme en exploration, plus tendue quand un Complice est en danger ou lors d'une attaque,
+  lumineuse quand un Complice est sauvé, sombre en cas de défaite. Elle baisse pendant les questions.
+- **Effets sonores** : dé qui roule et rebondit, pion qui se pose, jetons bleu (cristallin) et rouge (grave),
+  cartes, bonne / mauvaise réponse, face-à-face, tonnerre du Dark Master, gong de fin de manche,
+  Complice sauvé / perdu, fanfare de victoire, thème de défaite.
+- **Réglages du son** (bouton 🔊) : volume général, musique, effets, coupure (touche M), mémorisés.
+  Tout est synthétisé par la Web Audio API : aucun fichier audio téléchargé (éco-conception).
 - Les animations sont réduites si le système le demande (« réduire les animations »).
 - Contrastes des boutons vérifiés au repos, au survol et au focus (WCAG AA).
 
@@ -50,6 +58,7 @@ js/data/regles.js     données : plateau, Complices, Éclaireurs, seuils, cartes
 js/data/questions.js  les 200 questions + explications du livret maître du jeu
 js/data/textures.js   images des pions et des pioches (data URI, pour WebGL sans serveur)
 js/data/board-texture.js  texture du plateau
+js/audio.js           musique générative, effets sonores et réglages (Web Audio API)
 js/plateau3d.js       scène Three.js : plateau, pions, dés 3D, jetons, pioches, animations, sons
 js/jeu.js             moteur de règles (déroulé des manches, tours, effets des cartes)
 js/interface.js       interface HTML : actions, questions, cartes, choix, fin de partie

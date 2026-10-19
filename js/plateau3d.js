@@ -228,7 +228,7 @@ class Plateau3D {
     const depart = de.userData.repos.clone().add(new THREE.Vector3((Math.random() - 0.5) * 0.8, 0, 1.6));
     const arrivee = de.userData.repos.clone();
     const qSpin = new THREE.Quaternion();
-    this._son('de');
+    this._son('de', { couleur });
     return this.animer(1150, (t) => {
       const k = Plateau3D.easeOut(t);
       de.position.lerpVectors(depart, arrivee, k);
@@ -375,6 +375,7 @@ class Plateau3D {
           const p0 = m.position.clone();
           this.animer(350, (t) => { m.position.y = p0.y + t * 1.2; m.scale.setScalar(1 - t); })
             .then(() => this.scene.remove(m));
+          if (e.statut === 'actif') this._son('retrait');
         }
         while (z[cle].length < voulu) {
           const m = new THREE.Mesh(this.geoJeton, mat);
@@ -385,8 +386,7 @@ class Plateau3D {
           z[cle].push(m);
           this.animer(520, (t) => {
             m.position.y = cible.y + 2.2 * (1 - Plateau3D.easeOut(t)) + Math.abs(Math.sin(t * Math.PI * 2)) * 0.15 * (1 - t);
-          }).then(() => m.position.copy(cible));
-          this._son('jeton');
+          }).then(() => { m.position.copy(cible); this._son(couleur === 'bleu' ? 'jetonBleu' : 'jetonRouge'); });
         }
       }
       // Badge « Sauvé » / « Perdu »
@@ -712,37 +712,9 @@ class Plateau3D {
       .then(() => h.color.copy(c0));
   }
 
-  /* ---------- Sons (Web Audio, très légers) ---------- */
-  _son(type) {
-    if (this.muet) return;
-    try {
-      const ac = this.audio || (this.audio = new (window.AudioContext || window.webkitAudioContext)());
-      const o = ac.createOscillator(), g = ac.createGain();
-      const t = ac.currentTime;
-      const reglages = { de: [180, 0.12, 'square', 0.04], pas: [520, 0.06, 'sine', 0.05], jeton: [880, 0.09, 'triangle', 0.06], carte: [300, 0.18, 'sawtooth', 0.03] }[type] || [440, 0.1, 'sine', 0.05];
-      o.type = reglages[2];
-      o.frequency.setValueAtTime(reglages[0], t);
-      o.frequency.exponentialRampToValueAtTime(reglages[0] * 1.6, t + reglages[1]);
-      g.gain.setValueAtTime(reglages[3], t);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + reglages[1]);
-      o.connect(g).connect(ac.destination);
-      o.start(t); o.stop(t + reglages[1] + 0.02);
-    } catch (e) { /* audio indisponible */ }
-  }
-  sonResultat(bon) {
-    if (this.muet) return;
-    try {
-      const ac = this.audio || (this.audio = new (window.AudioContext || window.webkitAudioContext)());
-      const notes = bon ? [523, 659, 784] : [330, 262];
-      notes.forEach((f, i) => {
-        const o = ac.createOscillator(), g = ac.createGain();
-        const t = ac.currentTime + i * 0.11;
-        o.type = 'triangle'; o.frequency.value = f;
-        g.gain.setValueAtTime(0.07, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
-        o.connect(g).connect(ac.destination); o.start(t); o.stop(t + 0.3);
-      });
-    } catch (e) { /* audio indisponible */ }
-  }
+  /* ---------- Sons : délégués au module audio (js/audio.js) ---------- */
+  _son(type, opt) { if (window.NV_AUDIO) window.NV_AUDIO.effet(type, opt); }
+  sonResultat(bon) { this._son(bon ? 'bonne' : 'mauvaise'); }
 
   /* ---------- boucle de rendu ---------- */
   redimensionner() {
