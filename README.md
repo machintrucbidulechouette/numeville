@@ -7,7 +7,8 @@ Elle reproduit le **jeu de base** tel qu'il est décrit dans le livret de règle
 ## Lancer le jeu
 
 Ouvrir `index.html` dans un navigateur récent (Firefox, Chrome, Edge).
-Une connexion internet est nécessaire au démarrage : Three.js (r160) et les polices sont chargés depuis un CDN.
+Une connexion internet est nécessaire au démarrage : Three.js **r184** (dernière version stable, avril 2026) et les polices sont chargés depuis un CDN.
+Un navigateur compatible WebGL 2 est nécessaire (toutes les versions récentes de Firefox, Chrome, Edge et Safari).
 Aucun serveur n'est requis : les images utilisées en 3D et les questions sont embarquées dans des fichiers `.js`.
 
 Si besoin, on peut aussi servir le dossier : `python3 -m http.server` puis http://localhost:8000
@@ -34,13 +35,12 @@ Si besoin, on peut aussi servir le dossier : `python3 -m http.server` puis http:
 - **Les 4 Complices en 3D** derrière leur portrait sur la boucle : socle lumineux, buste holographique tiré des illustrations du jeu
   (toujours tourné vers la caméra) et emblème qui tourne (cœur, éclair, crâne, œil). Quand un Complice est sauvé, son buste grésille
   puis laisse place à sa version libérée (Sally, Nico, Iker, Tatiana) ; quand il est perdu, il vire au rouge et se met à clignoter.
-- **Cinématiques** courtes aux moments clés : ouverture en tour complet du plateau (la caméra plonge vers chaque Complice puis remonte,
-  avec sa présentation en légende, environ 13 s), face-à-face, attaque du Dark Master,
+- **Cinématiques** courtes aux moments clés : ouverture (survol de la ville en tournant puis descente vers le plateau), face-à-face, attaque du Dark Master,
   fin de manche, Complice sauvé (gerbe de lumière) ou perdu (fumée, lumière qui s'éteint), fin de partie.
   Elles se passent d'un clic ou avec Espace, et se coupent avec le bouton 🎬 (choix mémorisé).
 - **Caméra qui suit le joueur actif** : au début de chaque tour, pendant le déplacement (vers la case d'arrivée) et après chaque cinématique,
-  la vue glisse en douceur vers la zone du pion
-  (le centre du plateau, avec les dés et les pioches, reste visible). Le bouton 🎯 recentre sur le joueur actif.
+  la cible glisse en douceur vers la zone du pion en gardant l'angle et le zoom choisis à la souris
+  (le centre du plateau, avec les dés et les pioches, reste visible). Le bouton 🎯 recentre sur le joueur actif avec l'angle par défaut.
 - **Animations de retour** : petit saut du pion quand c'est son tour, jetons qui tombent sur le plateau et sur les fiches, fiche qui s'illumine
   à chaque jeton, résultat du dé affiché au-dessus du dé.
 - **Deux musiques d'ambiance génératives au choix** : *Néons* (synthwave nocturne) et *Circuit* (lo-fi rétro, sons 8 bits).

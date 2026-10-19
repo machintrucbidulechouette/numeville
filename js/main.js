@@ -135,7 +135,15 @@
   function demarrer() {
     if (!window.THREE || !window.NV_ADDONS) return;
     const ui = new Interface();
-    const plateau = new Plateau3D(document.querySelector('#scene'));
+    let plateau;
+    try { plateau = new Plateau3D(document.querySelector('#scene')); }
+    catch (e) {
+      console.error(e);
+      document.querySelector('#chargement').innerHTML = `<div class="erreur"><h2>La 3D ne peut pas démarrer</h2>
+        <p>Ce navigateur ou cette carte graphique ne gère pas WebGL 2, nécessaire à Three.js.<br>
+        Essaie avec une version récente de Firefox, Chrome, Edge ou Safari.</p></div>`;
+      return;
+    }
     window.__plateau = plateau;
     ui.plateau = plateau;
 
@@ -157,7 +165,7 @@
     document.querySelector('#btn-regles-accueil').addEventListener('click', () => ui.regles());
     document.querySelector('#btn-vue').addEventListener('click', () => {
       // recentre sur le joueur actif pendant la partie, sinon vue d'ensemble
-      if (window.__jeu && window.__jeu.joueurActif) plateau.vueJoueur(window.__jeu.joueurActif, 700); else plateau.vueDefaut();
+      if (window.__jeu && window.__jeu.joueurActif) plateau.vueJoueur(window.__jeu.joueurActif, 700, null, true); else plateau.vueDefaut();
     });
     initAudio();
     document.querySelector('#btn-journal').addEventListener('click', () => document.body.classList.toggle('journal-ouvert'));

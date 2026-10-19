@@ -15,7 +15,10 @@ class Plateau3D {
     this.jetons = {};          // id complice -> { bleus: [mesh], rouges: [mesh], badge }
     this.pioches = {};
     this.marqueurs = [];
-    this.horloge = new THREE.Clock();
+    // r183+ : Clock est déprécié au profit de Timer (dans le cœur depuis r179).
+    // connect(document) met le temps en pause quand l'onglet est caché (pas de saut au retour).
+    this.horloge = new THREE.Timer();
+    this.horloge.connect(document);
     this._init();
   }
 
@@ -50,7 +53,8 @@ class Plateau3D {
     r.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     r.setSize(w, h);
     r.shadowMap.enabled = true;
-    r.shadowMap.type = THREE.PCFSoftShadowMap;
+    // r182+ : PCFSoftShadowMap est déprécié, PCFShadowMap est désormais doux lui aussi
+    r.shadowMap.type = THREE.PCFShadowMap;
     r.toneMapping = THREE.ACESFilmicToneMapping;
     r.toneMappingExposure = 1.05;
     this.conteneur.appendChild(r.domElement);
@@ -82,7 +86,10 @@ class Plateau3D {
     soleil.castShadow = true;
     soleil.shadow.mapSize.set(2048, 2048);
     Object.assign(soleil.shadow.camera, { left: -9, right: 9, top: 9, bottom: -9, near: 1, far: 40 });
-    soleil.shadow.bias = -0.0005;
+    // r183 : les ombres améliorées n'ont plus besoin d'un fort décalage (bias)
+    soleil.shadow.bias = -0.0001;
+    soleil.shadow.normalBias = 0.02;
+    soleil.shadow.radius = 3;
     scene.add(soleil);
     for (const id of NV.ORDRE_COMPLICES) {
       const c = NV.COMPLICES[id];
@@ -102,7 +109,7 @@ class Plateau3D {
     this._complices3D();
 
     window.addEventListener('resize', () => this.redimensionner());
-    r.setAnimationLoop(() => this._boucle());
+    r.setAnimationLoop((temps) => this._boucle(temps));
   }
 
   _table() {
@@ -345,23 +352,34 @@ class Plateau3D {
   }
 
   /**
-   * Recentre en douceur la vue sur la zone du pion du joueur actif (ou sur `vers`, sa case
-   * d'arrivée pendant un déplacement) : la cible glisse vers le pion (32 %) et la caméra
-   * tourne légèrement de son côté. Le centre du plateau (dés, pioches) reste visible.
-   * Ignoré seulement pendant une cinématique en cours.
+   * Recentre en douceur sur la zone du pion du joueur actif (ou sur `vers`, sa case d'arrivée
+   * pendant un déplacement). Seule la cible glisse vers le pion (32 %) : l'angle et le zoom
+   * choisis à la souris sont conservés, la caméra ne « se réinitialise » pas.
+   * `reinit` (bouton 🎯) remet en plus l'angle et la distance par défaut.
    */
-  vueJoueur(joueur, duree = 1100, vers = null) {
+  vueJoueur(joueur, duree = 1100, vers = null, reinit = false) {
+    // un souci de caméra ne doit jamais bloquer la partie
+    try { return this._vueJoueur(joueur, duree, vers, reinit); } catch (e) { console.warn(e); return Promise.resolve(); }
+  }
+  _vueJoueur(joueur, duree, vers, reinit) {
     const pion = joueur && this.pions[joueur.id];
     if (!pion || this.enCinematique) return Promise.resolve();
-    // une vue mémorisée qui traîne (cinématique passée ou coupée) ne doit pas bloquer le recentrage
     this._vue = null;
-    this.controles.enabled = true;
+    this._enPlan = false;
     const p = vers || pion.position;
     const cible = this.VUE.cible.clone().lerp(new THREE.Vector3(p.x, 0, p.z), 0.32);
-    const lacet = THREE.MathUtils.clamp(p.x * 0.045, -0.22, 0.22);
-    const decalage = this.VUE.pos.clone().sub(this.VUE.cible).applyAxisAngle(new THREE.Vector3(0, 1, 0), lacet);
-    if (p.z < -1) decalage.multiplyScalar(1.06); // pion au fond : on recule un peu
-    return this._glisserVue(cible.clone().add(decalage), cible, this.mouvementReduit ? 1 : duree);
+    let decalage;
+    if (reinit) decalage = this.VUE.pos.clone().sub(this.VUE.cible);
+    else if (this._decalageMemo) decalage = this._decalageMemo;              // angle d'avant la cinématique
+    else decalage = this.camera.position.clone().sub(this.controles.target); // angle actuel du joueur
+    this._decalageMemo = null;
+    // garde-fous : ni trop près, ni sous le plateau
+    const d = THREE.MathUtils.clamp(decalage.length(), 6, 24);
+    decalage = decalage.clone().setLength(d);
+    if (decalage.y < 3) decalage.y = 3;
+    const pos = cible.clone().add(decalage);
+    if (pos.distanceTo(this.camera.position) < 0.05 && cible.distanceTo(this.controles.target) < 0.05) return Promise.resolve();
+    return this._glisserVue(pos, cible, this.mouvementReduit ? 1 : duree);
   }
 
   /** Transition de caméra annulable (une nouvelle transition ou une cinématique la remplace). */
@@ -796,13 +814,36 @@ class Plateau3D {
 
   memoriserVue() {
     // on garde la vue d'origine si une cinématique en déclenche une autre (ex. attaque → Complice perdu)
-    if (!this._vue) this._vue = { pos: this.camera.position.clone(), cible: this.controles.target.clone() };
+    if (!this._vue) {
+      this._vue = { pos: this.camera.position.clone(), cible: this.controles.target.clone() };
+      this._decalageMemo = this.camera.position.clone().sub(this.controles.target);
+    }
+  }
+
+  /**
+   * Annule l'élan restant d'un geste de souris (rotation, déplacement, zoom) sans l'appliquer :
+   * sinon il s'ajouterait d'un coup au mouvement automatique et la vue « sauterait ».
+   * OrbitControls r184 garde cet élan dans _sphericalDelta, _panOffset et _scale.
+   */
+  _viderInertie() {
+    const c = this.controles;
+    if (c._sphericalDelta) c._sphericalDelta.set(0, 0, 0);
+    if (c._panOffset) c._panOffset.set(0, 0, 0);
+    if (typeof c._scale === 'number') c._scale = 1;
   }
 
   /** Signale une animation de caméra : les contrôles à la souris ne la perturbent pas. */
   _cameraPrise(promesse) {
+    if (!this._occupee) {
+      this._etaitActive = this.controles.enabled;
+      this._viderInertie();
+    }
     this._occupee = (this._occupee || 0) + 1;
-    return promesse.finally(() => { this._occupee--; });
+    this.controles.enabled = false; // aucune saisie souris pendant le mouvement : rien ne s'accumule
+    return promesse.finally(() => {
+      this._occupee--;
+      if (this._occupee === 0 && !this.enCinematique && !this._enPlan) this.controles.enabled = true;
+    });
   }
 
   /** Déplace la caméra vers (pos, cible) en douceur. */
@@ -819,79 +860,37 @@ class Plateau3D {
   async revenirVue(duree = 1000) {
     const v = this._vue || { pos: this.VUE.pos, cible: this.VUE.cible };
     this._vue = null;
+    this._enPlan = false;
     await this.voler(v.pos, v.cible, duree);
     this.controles.enabled = true;
   }
 
   /** Plan rapproché sur un point du plateau, vu depuis le côté des joueurs. */
   async plan(cible, recul = 3.2, hauteur = 3.4, duree = 1200) {
+    this._enPlan = true;
     this.controles.enabled = false;
     const pos = cible.clone().add(new THREE.Vector3(cible.x * 0.12, hauteur, recul));
     await this.voler(pos, cible, duree);
   }
 
-  /**
-   * Ouverture : tour complet du plateau. La caméra plonge vers chaque Complice
-   * (zoom avant, courte pause), remonte entre deux quartiers (zoom arrière),
-   * puis se pose sur la vue de jeu. `etape(id)` permet de mettre à jour la légende.
-   */
-  async cineIntro(etape = () => {}) {
+  /** Ouverture : survol de Numéville en tournant, puis descente vers la vue de jeu. */
+  async cineIntro() {
     this.controles.enabled = false;
     this._idVue++;
-    const ordre = ['hacker', 'hyperco', 'stalky', 'datata']; // sens antihoraire depuis le côté des joueurs
-    const C = new THREE.Vector3(0, 0, 0);
-    const pts = [new THREE.Vector3(0, 21, 17)], cibles = [new THREE.Vector3(0, 0, 0)], arrets = [];
-    const dirDe = (id) => { const p = this.posFigure(id); return new THREE.Vector3(p.x, 0, p.z).normalize(); };
-    ordre.forEach((id, i) => {
-      const f = this.posFigure(id);
-      const d = dirDe(id);
-      pts.push(f.clone().add(d.clone().multiplyScalar(2.3)).setY(this.HAUT + 1.5));   // zoom avant face au Complice
-      cibles.push(f.clone().add(d.clone().multiplyScalar(-0.6)).setY(this.HAUT + 0.75));
-      arrets.push({ id, index: pts.length - 1 });
-      if (i < ordre.length - 1) {                                                       // zoom arrière entre deux quartiers
-        const m = d.clone().add(dirDe(ordre[i + 1])).normalize();
-        pts.push(m.clone().multiplyScalar(8.6).setY(6.2));
-        cibles.push(m.clone().multiplyScalar(1.2));
-      }
-    });
-    pts.push(this.VUE.pos.clone()); cibles.push(this.VUE.cible.clone());
-    const courbe = new THREE.CatmullRomCurve3(pts, false, 'centripetal');
-    const courbeCible = new THREE.CatmullRomCurve3(cibles, false, 'centripetal');
-    const n = pts.length - 1;
-
-    // calendrier (en secondes) : [instant, index du point de passage] ; deux fois le même index = pause
-    const cles = [[0, 0]];
-    let t = 0;
-    arrets.forEach((a, i) => {
-      t += i === 0 ? 2.0 : 1.05;  cles.push([t, a.index]);       // arrivée sur le Complice
-      t += 0.75;                  cles.push([t, a.index]);       // pause
-      if (i < arrets.length - 1) { t += 1.05; cles.push([t, a.index + 1]); } // passage au point haut
-    });
-    t += 2.0; cles.push([t, n]);
-    const total = t;
-    const ease = Plateau3D.ease, easeIn = (x) => x * x, easeOut = (x) => 1 - (1 - x) * (1 - x);
-    let derniereEtape = null;
-    etape('intro');
-
-    await this._cameraPrise(this.animer(total * 1000, (k) => {
-      const s = k * total;
-      let j = 0;
-      while (j < cles.length - 2 && s > cles[j + 1][0]) j++;
-      const [t0, i0] = cles[j], [t1, i1] = cles[j + 1];
-      const f = t1 > t0 ? Math.min(1, Math.max(0, (s - t0) / (t1 - t0))) : 1;
-      // vitesse continue : on ralentit seulement en arrivant sur un Complice ou à la fin
-      const versArret = arrets.some((a) => a.index === i1) || i1 === n;
-      const depuisArret = arrets.some((a) => a.index === i0) || i0 === 0;
-      const e = depuisArret && versArret ? ease(f) : versArret ? easeOut(f) : depuisArret ? easeIn(f) : f;
-      const u = (i0 + (i1 - i0) * e) / n;
-      this.camera.position.copy(courbe.getPoint(u));
-      this.controles.target.copy(courbeCible.getPoint(u));
-      const arret = arrets.find((a) => Math.abs(u * n - a.index) < 0.22);
-      const id = arret ? arret.id : (u > 0.93 ? 'fin' : null);
-      if (id && id !== derniereEtape) { derniereEtape = id; etape(id); }
+    const fin = this.VUE.pos.clone(), cibleFin = this.VUE.cible.clone();
+    const rFin = Math.hypot(fin.x, fin.z - cibleFin.z), aFin = Math.atan2(fin.x, fin.z - cibleFin.z);
+    const a0 = aFin - 2.2;
+    await this._cameraPrise(this.animer(5200, (t) => {
+      const k = Plateau3D.ease(t);
+      const ang = a0 + (aFin - a0) * k;
+      const r = 17 + (rFin - 17) * k;
+      const h = 17 + (fin.y - 17) * k;
+      const cz = cibleFin.z * k;
+      this.camera.position.set(Math.sin(ang) * r, h, cz + Math.cos(ang) * r);
+      this.controles.target.set(0, 0, cz);
     }, true));
-    this.camera.position.copy(this.VUE.pos);
-    this.controles.target.copy(this.VUE.cible);
+    this.camera.position.copy(fin);
+    this.controles.target.copy(cibleFin);
     this.controles.enabled = true;
   }
 
@@ -998,9 +997,10 @@ class Plateau3D {
     return this._glisserVue(this.VUE.pos.clone(), this.VUE.cible.clone(), 700);
   }
 
-  _boucle() {
+  _boucle(horodatage) {
     const now = performance.now();
-    const temps = this.horloge.getElapsedTime();
+    this.horloge.update(horodatage);
+    const temps = this.horloge.getElapsed();
     this.anims = this.anims.filter((a) => {
       const t = Math.min(1, (now - a.t0) / a.duree);
       a.maj(t);
@@ -1015,16 +1015,7 @@ class Plateau3D {
     for (const a of this.anneauxDest) if (a.visible) a.material.opacity = 0.55 + 0.4 * Math.sin(temps * 6);
     for (const z of Object.values(this.jetons)) if (z.badge) z.badge.position.y = 0.95 + Math.sin(temps * 2) * 0.05;
     this._animerFigures(temps);
-    // Pendant une animation de caméra, les contrôles ne doivent pas la contrarier (inertie résiduelle).
-    // À la fin, on vide leur inertie pour que la vue reste exactement où l'animation l'a posée.
-    if (this._occupee > 0) { this._etaitOccupee = true; }
-    else {
-      if (this._etaitOccupee) {
-        this._etaitOccupee = false;
-        this.controles.enableDamping = false; this.controles.update(); this.controles.enableDamping = true;
-      }
-      this.controles.update();
-    }
+    this.controles.update();
     this.renderer.render(this.scene, this.camera);
   }
 }

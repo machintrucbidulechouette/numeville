@@ -10,12 +10,13 @@
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Lexend:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
 
-  <!-- Three.js (module ES) chargé depuis un CDN, exposé ensuite en global pour les scripts du jeu -->
+  <!-- Three.js r184 (dernière version stable, avril 2026), module ES chargé depuis un CDN
+       puis exposé en global pour les scripts du jeu. WebGL 2 requis (WebGL 1 n'est plus supporté depuis r163). -->
   <script type="importmap">
   {
     "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      "three": "https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.184.0/examples/jsm/"
     }
   }
   </script>

@@ -213,14 +213,8 @@ class Jeu {
 
     this.son('intro');
     if (window.NV_AUDIO) NV_AUDIO.demarrerMusique();
-    // Ouverture : tour du plateau, la légende présente chaque Complice au passage de la caméra
-    const legendes = {
-      intro: ['Numéville', 'Le Dark Master et ses 4 Complices ont pris le contrôle de la ville.', '#38e1ff'],
-      fin: ['À vous de jouer !', 'Éclaireurs, répondez aux questions pour ramener les Complices à la raison.', '#38e1ff'],
-    };
-    for (const id of NV.ORDRE_COMPLICES) legendes[id] = [NV.COMPLICES[id].nom, NV.COMPLICES[id].theme + '.', NV.COMPLICES[id].couleur];
-    await this.cine(() => this.plateau.cineIntro((etape) => { const l = legendes[etape]; if (l) this.ui.cinemaMaj(...l); }),
-      ...legendes.intro);
+    await this.cine(() => this.plateau.cineIntro(), 'Numéville',
+      'Le Dark Master et ses 4 Complices ont pris le contrôle de la ville. Éclaireurs, à vous de jouer !', '#38e1ff');
 
     await this.choisirPremierJoueur();
 
