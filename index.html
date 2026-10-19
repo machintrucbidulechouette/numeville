@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Numéville 3D</title>
+  <meta name="description" content="Version numérique en 3D (Three.js) du jeu de plateau coopératif Numéville — Les éclaireurs du numérique.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Lexend:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+
+  <!-- Three.js (module ES) chargé depuis un CDN, exposé ensuite en global pour les scripts du jeu -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <!-- Scène 3D -->
+  <div id="scene"></div>
+
+  <!-- Chargement -->
+  <div id="chargement"><div class="spinner"></div><p>Chargement de Numéville…</p></div>
+
+  <!-- Barre du haut -->
+  <header id="hud">
+    <div class="logo">Numéville<small>Les éclaireurs du numérique</small></div>
+    <div class="hud-infos">
+      <div class="info"><span>Manche</span><b id="hud-manche">–</b></div>
+      <div class="info"><span>Fin de manche</span><b><span id="hud-pioche">10</span> cartes</b></div>
+      <div class="info"><span>Niveau</span><b id="hud-niveau">–</b></div>
+      <div id="hud-effets"></div>
+    </div>
+    <div class="hud-joueurs">
+      <div id="hud-joueur"></div>
+      <div id="hud-ordre"></div>
+    </div>
+    <nav class="hud-outils">
+      <button id="btn-vue" class="icone" title="Recentrer la vue">🎯</button>
+      <button id="btn-cine" class="icone" title="Cinématiques activées" aria-pressed="true">🎬</button>
+      <button id="btn-son" class="icone" title="Son">🔊</button>
+      <button id="btn-journal" class="icone" title="Journal">📜</button>
+      <button id="btn-regles" class="icone" title="Aide de jeu">?</button>
+    </nav>
+  </header>
+
+  <!-- Fiches Complices -->
+  <aside id="fiches" aria-label="Fiches des Complices"></aside>
+
+  <!-- Journal de partie -->
+  <aside id="journal" aria-label="Journal de la partie">
+    <h3>Journal</h3>
+    <div class="defile"><ol id="journal-liste"></ol></div>
+  </aside>
+
+  <!-- Barre d'actions -->
+  <footer id="actions" aria-live="polite"></footer>
+
+  <!-- Écran d'accueil -->
+  <section id="accueil">
+    <div class="accueil-boite">
+      <div class="accueil-titre">
+        <h1>Numéville</h1>
+        <p>Les éclaireurs du numérique — version 3D</p>
+      </div>
+      <p class="pitch">Le Dark Master et ses 4 Complices diffusent de <b class="rouge">mauvaises pratiques numériques</b> dans la ville.
+        Ensemble, parcourez Numéville et répondez aux questions pour propager les <b class="bleu">bonnes pratiques</b> et sauver les Complices.</p>
+
+      <div class="reglage">
+        <h2>Nombre de joueurs</h2>
+        <div id="nb-joueurs" class="segment">
+          <button class="choisi" data-nb="2">2</button><button data-nb="3">3</button><button data-nb="4">4</button>
+        </div>
+      </div>
+
+      <div class="reglage">
+        <h2>Éclaireurs</h2>
+        <div id="liste-joueurs"></div>
+      </div>
+
+      <div class="reglage">
+        <h2>Niveau de difficulté</h2>
+        <div id="niveaux" class="segment niveaux">
+          <button data-niveau="decouverte">Découverte<small></small></button>
+          <button data-niveau="standard" class="choisi">Standard<small></small></button>
+          <button data-niveau="expert">Expert<small></small></button>
+        </div>
+        <p id="seuils"></p>
+      </div>
+
+      <div class="accueil-actions">
+        <button id="btn-regles-accueil" class="btn">Aide de jeu</button>
+        <button id="btn-jouer" class="btn principal">Lancer la partie</button>
+      </div>
+      <p class="credits">D’après le jeu de plateau <b>Numéville</b> de l’Institut du Numérique Responsable (CC BY-NC-ND 4.0).</p>
+    </div>
+  </section>
+
+  <!-- Bandes cinéma des cinématiques -->
+  <div id="cinema" aria-live="polite">
+    <div class="bande haut"></div>
+    <div class="bande bas">
+      <div class="legende"><h2></h2><p></p></div>
+      <button class="passer" type="button">Passer <span aria-hidden="true">⏭</span></button>
+    </div>
+  </div>
+
+  <div id="modale" role="dialog" aria-modal="true"></div>
+  <div id="aide" role="dialog" aria-modal="true"></div>
+
+  <!-- Données du jeu -->
+  <script src="js/data/regles.js"></script>
+  <script src="js/data/questions.js"></script>
+  <script src="js/data/textures.js"></script>
+  <script src="js/data/board-texture.js"></script>
+  <!-- Code du jeu -->
+  <script src="js/plateau3d.js"></script>
+  <script src="js/jeu.js"></script>
+  <script src="js/interface.js"></script>
+  <script src="js/main.js"></script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+    window.THREE = THREE;
+    window.NV_ADDONS = { OrbitControls, RoundedBoxGeometry };
+    window.dispatchEvent(new Event('three-pret'));
+  </script>
+</body>
+</html>
