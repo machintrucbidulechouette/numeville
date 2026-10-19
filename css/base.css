@@ -78,7 +78,23 @@ body.en-jeu #hud { opacity: 1; transform: none; }
 .hud-infos { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
 .info > span { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--doux); }
 .info b { font-family: var(--titre); font-size: 17px; white-space: nowrap; }
-#hud-effets span { font-size: 12px; padding: 3px 9px; border-radius: 999px; background: rgba(255, 79, 216, .15); border: 1px solid rgba(255, 79, 216, .4); margin-right: 6px; }
+#hud-effets { display: flex; gap: 6px; flex-wrap: wrap; }
+#hud-effets .effet { font: inherit; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; cursor: pointer; color: #ffe3f8;
+  background: rgba(255, 79, 216, .15); border: 1px solid rgba(255, 79, 216, .45); transition: background-color .2s, border-color .2s; }
+#hud-effets .effet::after { content: ' ⓘ'; opacity: .8; }
+#hud-effets .effet:hover, #hud-effets .effet:focus-visible, #hud-effets .effet[aria-expanded="true"] { background: rgba(255, 79, 216, .32); border-color: #ff8be6; color: #ffffff; }
+#hud-effets .effet:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+/* bulle d'explication sous l'étiquette d'effet */
+#hud-bulle { position: absolute; top: calc(100% + 10px); z-index: 7; padding: 12px 40px 12px 14px; border-radius: 14px;
+  background: var(--panneau-plein); border: 1px solid rgba(255, 79, 216, .5); box-shadow: 0 18px 50px rgba(0,0,0,.55); color: var(--texte);
+  animation: monte .25s ease-out; }
+#hud-bulle[hidden] { display: none; }
+#hud-bulle::before { content: ''; position: absolute; top: -7px; left: calc(var(--fleche, 24px) - 6px); width: 12px; height: 12px; transform: rotate(45deg);
+  background: var(--panneau-plein); border-left: 1px solid rgba(255, 79, 216, .5); border-top: 1px solid rgba(255, 79, 216, .5); }
+#hud-bulle h3 { margin: 0 0 6px; font-family: var(--titre); font-size: 16px; }
+#hud-bulle p { margin: 0; font-size: 13.5px; line-height: 1.45; }
+#hud-bulle .etat { margin-top: 8px; font-size: 12.5px; color: #ffc4f0; }
+#hud-bulle .icone { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; font-size: 13px; }
 .hud-joueurs { margin-left: auto; display: flex; align-items: center; gap: 12px; }
 #hud-joueur { display: flex; align-items: center; gap: 8px; font-family: var(--titre); font-weight: 700; font-size: 18px; color: var(--c); }
 #hud-joueur img { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; object-position: 50% 8%; border: 3px solid var(--c); }

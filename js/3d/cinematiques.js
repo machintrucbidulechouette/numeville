@@ -104,26 +104,88 @@ class Cinematiques3D {
     await this.plan(fig, 2.6, 1.5, 1200);
     const lum = c._lumiere;
     if (statut === 'sauve') {
-      this.particules(fig.clone().setY(this.HAUT + 0.3), [c.couleur, '#ffffff', c.couleurClaire], 'eclat', 2400);
+      // sobre : une onde douce au sol, quelques paillettes qui montent lentement, la lumière du quartier qui s'éclaire
+      const sol = fig.clone().setY(this.HAUT);
+      setTimeout(() => {
+        this._onde(sol, c.couleurClaire, 1600, 0);
+        this.particules(sol.clone().setY(this.HAUT + 0.2), [c.couleurClaire, '#ffffff'], 'paillettes', 2600);
+      }, 250);
       const i0 = lum.intensity;
-      this.animer(1600, (t) => { lum.intensity = i0 + Math.sin(t * Math.PI) * 30; }, true);
+      this.animer(2200, (t) => { lum.intensity = i0 + Math.sin(t * Math.PI) * 14; }, true).then(() => { lum.intensity = i0; });
+      // léger travelling avant pendant la transformation
+      const p0 = this.camera.position.clone(), cible = this.controles.target.clone();
+      await this._cameraPrise(this.animer(1800, (t) => {
+        this.camera.position.lerpVectors(p0, cible, Plateau3D.ease(t) * 0.12);
+      }, true));
     } else {
       this.particules(fig.clone().setY(this.HAUT + 0.1), ['#1a0a10', '#3a0b18', '#55101f'], 'fumee', 2600);
       const i0 = lum.intensity;
       this.animer(1600, (t) => { lum.intensity = i0 * (Math.random() > 0.3 ? 1 - t * 0.8 : 0.1); lum.color.set(t > 0.5 ? '#ff2a3a' : c.couleur); }, true);
     }
-    await this.attendre(1800);
+    await this.attendre(statut === 'sauve' ? 700 : 1800);
   }
 
-  /** Attaque du Dark Master : plan sur la pioche Attaque, lumière rouge. */
+  /**
+   * Attaque du Dark Master : la ville s'assombrit, des éclairs rouges frappent la pioche Attaque,
+   * les lumières des Complices vacillent, la carte du dessus se soulève en tremblant
+   * et une onde de choc secoue la caméra.
+   */
   async cineAttaque() {
     const P = this.pioches.attaque;
     this.memoriserVue();
-    const cible = P.base.clone();
-    this._teinte('#ff2a3a', 1700);
-    this.particules(cible.clone().setY(this.HAUT + 0.3), ['#ff2a3a', '#ff7a2a', '#b0102a'], 'braises', 1800);
-    await this.plan(cible, 3.0, 3.2, 1100);
-    await this.attendre(500);
+    const base = P.base.clone().setY(this.HAUT);
+    const duree = 2300;
+
+    // la ville s'assombrit (même mécanisme que le crépuscule), teinte rouge
+    this.animer(duree + 300, (t) => { this._fCrep = (t < 0.2 ? Plateau3D.ease(t / 0.2) : t > 0.8 ? 1 - Plateau3D.ease((t - 0.8) / 0.2) : 1) * 0.85; }, true)
+      .then(() => { this._fCrep = 0; });
+    this._teinte('#ff2a3a', duree);
+
+    // éclairs : flashs rouges brefs et irréguliers au-dessus de la pioche
+    const eclair = new THREE.PointLight('#ff3a4a', 0, 12, 1.1);
+    eclair.position.copy(base).setY(this.HAUT + 2.6);
+    this.scene.add(eclair);
+    const flashs = [0.1, 0.15, 0.38, 0.43, 0.46, 0.7];
+    this.animer(duree, (t) => {
+      let v = 0;
+      for (const f of flashs) { const d = t - f; if (d >= 0 && d < 0.045) v = Math.max(v, 1 - d / 0.045); }
+      eclair.intensity = v * 55;
+    }, true).then(() => this.scene.remove(eclair));
+
+    // les lumières des quartiers vacillent comme une panne
+    for (const id of NV.ORDRE_COMPLICES) {
+      const l = NV.COMPLICES[id]._lumiere, i0 = l.intensity;
+      this.animer(duree, (t) => { l.intensity = t > 0.92 ? i0 : i0 * (Math.random() < 0.25 ? 0.15 : 0.7); }, true).then(() => { l.intensity = i0; });
+    }
+
+    // onde de choc rouge et braises au moment du gros éclair
+    setTimeout(() => {
+      this._onde(base, '#ff2a3a', 1100, 0);
+      this._onde(base, '#ff7a2a', 1100, 220);
+      this.particules(base.clone().setY(this.HAUT + 0.3), ['#ff2a3a', '#ff7a2a', '#b0102a'], 'braises', 1800);
+    }, duree * 0.38);
+
+    // la carte du dessus se soulève et tremble
+    const carte = P.cartes[P.cartes.length - 1];
+    if (carte) {
+      const y0 = carte.position.y, x0 = carte.position.x, z0 = carte.position.z;
+      this.animer(duree, (t) => {
+        const k = Plateau3D.ease(Math.max(0, (t - 0.3) / 0.7));
+        const tremble = 0.025 * k * (1 - Math.max(0, t - 0.85) / 0.15);
+        carte.position.set(x0 + (Math.random() - 0.5) * tremble, y0 + k * 0.6, z0 + (Math.random() - 0.5) * tremble);
+        carte.rotation.x = Math.sin(t * 40) * 0.05 * k;
+      }, true);
+    }
+
+    // caméra : plongée sur la pioche puis secousse à l'impact
+    await this.plan(base, 3.0, 3.2, 850);
+    const p = this.camera.position.clone();
+    await this._cameraPrise(this.animer(900, (t) => {
+      const a = 0.09 * Math.pow(1 - t, 2);
+      this.camera.position.set(p.x + (Math.random() - 0.5) * a, p.y + (Math.random() - 0.5) * a, p.z + (Math.random() - 0.5) * a);
+    }, true));
+    this.camera.position.copy(p);
+    await this.attendre(450);
   }
 
   /** Fin de manche : la caméra se pose sur la pioche Fin de manche. */

@@ -153,6 +153,7 @@ class Complices3D {
     const c = NV.COMPLICES[id];
     // la transformation démarre quand la caméra arrive (cinématique d'environ 1,2 s)
     setTimeout(() => {
+      if (statut === 'sauve') return this._transformationSauve(f, c);
       this.animer(900, (t) => {
         f.matBuste.opacity = Math.random() < 0.5 ? 0.2 : 0.95;
         f.pivot.scale.set(1 + (Math.random() - 0.5) * 0.12 * (1 - t), 1, 1);
@@ -202,6 +203,38 @@ class Complices3D {
       if (n > besoin) { besoin = n; sens = s; }
     }
     return droite.multiplyScalar(Math.min(besoin, 1.15) * sens);
+  }
+
+  /**
+   * Complice sauvé : pas de grésillement, une transformation douce. Le buste s'illumine,
+   * prend sa nouvelle apparence au plus fort de la lumière avec un petit rebond,
+   * et le faisceau du socle reste un peu plus lumineux ensuite.
+   */
+  _transformationSauve(f, c) {
+    const blanc = new THREE.Color(2.2, 2.2, 2.2), normal = new THREE.Color(1, 1, 1);
+    const fo = f.faisceau.material.opacity;
+    f.anneau.material.color.set('#ffffff');
+    f.matScan.color.set('#ffffff');
+    return this.animer(1300, (t) => {
+      // montée vers le blanc (0 → 0,45), changement d'image, puis retour aux couleurs
+      const k = t < 0.45 ? Plateau3D.ease(t / 0.45) : 1 - Plateau3D.ease((t - 0.45) / 0.55);
+      f.matBuste.color.copy(normal).lerp(blanc, k);
+      f.matBuste.opacity = 0.9 + 0.1 * k;
+      if (t >= 0.45 && f.matBuste.map !== f.tex.sauve) { f.matBuste.map = f.tex.sauve; f.matBuste.needsUpdate = true; }
+      const rebond = t < 0.45 ? 1 : 1 + Math.sin((t - 0.45) / 0.55 * Math.PI) * 0.06;
+      f.pivot.scale.set(rebond, rebond, 1);
+      f.faisceau.material.opacity = fo + Math.sin(t * Math.PI) * 0.3 + t * 0.08;
+      f.faisceau.scale.set(1 + Math.sin(t * Math.PI) * 0.15, 1, 1 + Math.sin(t * Math.PI) * 0.15);
+    }).then(() => {
+      f.matBuste.color.copy(normal);
+      f.matBuste.opacity = 1;
+      f.pivot.scale.set(1, 1, 1);
+      f.faisceau.scale.set(1, 1, 1);
+      f.faisceau.material.opacity = 0.22;
+      f.faisceau.material.color.set(c.couleurClaire);
+      f.matScan.opacity = 0.05;
+      f.embleme.material.color.set('#ffffff');
+    });
   }
 
   _animerFigures(temps) {

@@ -118,3 +118,18 @@
 .regles ol, .regles ul { padding-left: 18px; margin: 0; font-size: 13.5px; line-height: 1.5; color: #d7dcf3; }
 .regles li { margin-bottom: 5px; }
 .credits { font-size: 12px !important; color: var(--doux) !important; }
+
+/* carte Attaque : une fois retournée, elle tremble brièvement et s'entoure d'un halo rouge */
+.carte-dm.attaque.retournee { animation: secousse-attaque .55s .72s both; }
+.carte-dm.attaque.retournee .dm-face { animation: halo-attaque 1.4s .7s ease-out both; }
+@keyframes secousse-attaque {
+  0%, 100% { translate: 0 0; }
+  15% { translate: -7px 2px; } 30% { translate: 6px -2px; } 45% { translate: -5px 1px; }
+  60% { translate: 4px -1px; } 75% { translate: -2px 0; } 90% { translate: 1px 0; }
+}
+@keyframes halo-attaque {
+  0% { box-shadow: 0 0 0 0 rgba(255, 42, 58, 0); }
+  25% { box-shadow: 0 0 46px 10px rgba(255, 42, 58, .65); }
+  100% { box-shadow: 0 0 22px 2px rgba(255, 42, 58, .25); }
+}
+@media (prefers-reduced-motion: reduce) { .carte-dm.attaque.retournee { animation: none; } }

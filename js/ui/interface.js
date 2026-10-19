@@ -84,12 +84,8 @@ class Interface {
       const cartes = jeu.avance ? `${p.objet ? ' — objet : ' + p.objet.titre : ''}${p.pouvoir ? ' — pouvoir : ' + p.pouvoir.carte.titre : ''}` : '';
       return `<span class="mini ${p === j ? 'actif' : ''}" style="--c:${e.couleur}" title="${p.nom}${p.notification ? ' — notification sans fin' : ''}${p.piegeClics ? ' — piège à clics' : ''}${cartes}"><img src="${IMG}eclaireur-${e.id}.jpg" alt="${p.nom}">${p.notification ? '<i>🔔</i>' : ''}${p.piegeClics ? '<i>🪤</i>' : ''}${jeu.avance && (p.objet || p.pouvoir) ? `<i class="cartes">${p.objet ? '🧰' : ''}${p.pouvoir ? '⚡' : ''}</i>` : ''}</span>`;
     }).join('');
-    const effets = [];
-    if (jeu.effets.nuitBlanche) effets.push('🌙 Nuit blanche');
-    if (jeu.effets.brouillard) effets.push('🌫️ Brouillard');
-    if (jeu.effets.filtreHyperco) effets.push('🛡️ Filtre anti-pub');
     this.majMain(jeu);
-    $('#hud-effets').innerHTML = effets.map((e) => `<span>${e}</span>`).join('');
+    this.majEffets(jeu);
 
     this._prec = this._prec || {};
     for (const id of NV.ORDRE_COMPLICES) {
@@ -329,6 +325,89 @@ class Interface {
       setTimeout(() => { c.classList.add('retournee'); if (window.NV_AUDIO) NV_AUDIO.effet('retourne'); }, 60);
       setTimeout(() => b.focus({ preventScroll: true }), 400);
     });
+  }
+
+  /**
+   * Effets en cours dans la barre du haut (Nuit blanche, Brouillard, Filtre anti-pub) :
+   * chaque étiquette est un bouton qui ouvre une bulle d'explication juste en dessous.
+   */
+  majEffets(jeu) {
+    const nomC = (id) => NV.COMPLICES[id].nom;
+    const effets = [];
+    const nb = (e) => e.nuitBlanche;
+    if (nb(jeu.effets) || nb(jeu.effetsProchains || {})) {
+      const actif = nb(jeu.effets);
+      effets.push({ cle: 'nuit', label: actif ? '🌙 Nuit blanche' : '🌙 Nuit blanche (prochaine manche)',
+        titre: '🌙 Nuit blanche sur les écrans',
+        texte: `Le Dark Master a joué cette carte « Fin de manche ». ${actif ? 'Pendant <b>cette manche</b>' : 'Pendant la <b>prochaine manche</b>'}, le <b>premier dé noir qui donne 1, 2 ou 3</b> transforme la question en <b>question difficile</b>. Ensuite l’effet disparaît et les autres lancers se jouent normalement.`,
+        etat: actif ? 'Actif : en attente du premier 1, 2 ou 3 au dé noir.' : 'Programmé : commence à la prochaine manche.' });
+    }
+    const br = jeu.effets.brouillard || (jeu.effetsProchains && jeu.effetsProchains.brouillard);
+    if (br) {
+      const actif = !!jeu.effets.brouillard;
+      const restants = NV.ORDRE_COMPLICES.filter((id) => jeu.complices[id].statut === 'actif' && !(actif && br.has(id)));
+      effets.push({ cle: 'brouillard', label: actif ? '🌫️ Brouillard' : '🌫️ Brouillard (prochaine manche)',
+        titre: '🌫️ Brouillard sur Numéville',
+        texte: `${actif ? 'Pendant <b>cette manche</b>' : 'Pendant la <b>prochaine manche</b>'}, la <b>première mauvaise réponse</b> de chaque Complice ajoute <b>2 jetons</b> mauvaise pratique au lieu d’1. Les mauvaises réponses suivantes n’en ajoutent qu’1.`,
+        etat: restants.length ? `Encore exposés : ${restants.map(nomC).join(', ')}.` : 'Tous les Complices ont déjà subi le brouillard.' });
+    }
+    if (jeu.effets.filtreHyperco) {
+      effets.push({ cle: 'filtre', label: '🛡️ Filtre anti-pub', titre: '🛡️ Filtre anti-pub (objet)',
+        texte: 'Un Éclaireur a activé le Filtre anti-pub dans le quartier d’Hyperco : jusqu’à la fin de la manche, Hyperco reçoit <b>au plus 1 jeton</b> mauvaise pratique à chaque mauvaise réponse.',
+        etat: 'Actif jusqu’à la fin de la manche.' });
+    }
+    this._effets = effets;
+    const zone = $('#hud-effets');
+    zone.innerHTML = '';
+    for (const e of effets) {
+      zone.appendChild(el('button', { type: 'button', class: 'effet', 'data-cle': e.cle, 'aria-expanded': String(this._bulle === e.cle),
+        'aria-controls': 'hud-bulle', title: 'Qu’est-ce que c’est ?', onclick: (ev) => { ev.stopPropagation(); this.basculerBulle(e.cle); } }, e.label));
+    }
+    // hauteur réelle du HUD (sur mobile, la ligne d'effets le rallonge) : les fiches se placent dessous
+    this._hauteurHUD();
+    if (!this._resizeHUD) { this._resizeHUD = true; window.addEventListener('resize', () => this._hauteurHUD()); }
+    // la bulle ouverte suit l'état du jeu (ou se ferme si l'effet a disparu)
+    if (this._bulle) { if (effets.some((e) => e.cle === this._bulle)) this.ouvrirBulle(this._bulle); else this.fermerBulle(); }
+  }
+
+  _hauteurHUD() {
+    const h = $('#hud');
+    if (h) document.documentElement.style.setProperty('--hud-h', h.offsetHeight + 'px');
+  }
+
+  basculerBulle(cle) { if (this._bulle === cle) this.fermerBulle(); else this.ouvrirBulle(cle); }
+
+  ouvrirBulle(cle) {
+    const e = (this._effets || []).find((x) => x.cle === cle);
+    const bouton = $(`#hud-effets [data-cle="${cle}"]`);
+    if (!e || !bouton) return;
+    let bulle = $('#hud-bulle');
+    if (!bulle) {
+      bulle = el('div', { id: 'hud-bulle', role: 'dialog', 'aria-live': 'polite' });
+      $('#hud').appendChild(bulle);
+      document.addEventListener('click', (ev) => { if (this._bulle && !bulle.contains(ev.target)) this.fermerBulle(); });
+      document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && this._bulle) this.fermerBulle(); });
+    }
+    bulle.innerHTML = `<h3>${e.titre}</h3><p>${e.texte}</p><p class="etat">${e.etat}</p>`;
+    const fermer = el('button', { type: 'button', class: 'icone', 'aria-label': 'Fermer', onclick: (ev) => { ev.stopPropagation(); this.fermerBulle(); } }, '✕');
+    bulle.prepend(fermer);
+    bulle.hidden = false;
+    this._bulle = cle;
+    for (const b of document.querySelectorAll('#hud-effets .effet')) b.setAttribute('aria-expanded', String(b.dataset.cle === cle));
+    // placée sous l'étiquette, sans sortir de l'écran
+    const hud = $('#hud').getBoundingClientRect(), r = bouton.getBoundingClientRect();
+    const larg = Math.min(340, window.innerWidth - 16);
+    const gauche = Math.max(8, Math.min(r.left, window.innerWidth - larg - 8));
+    bulle.style.width = larg + 'px';
+    bulle.style.left = (gauche - hud.left) + 'px';
+    bulle.style.setProperty('--fleche', Math.max(14, Math.min(larg - 20, r.left + r.width / 2 - gauche)) + 'px');
+  }
+
+  fermerBulle() {
+    const bulle = $('#hud-bulle');
+    if (bulle) bulle.hidden = true;
+    this._bulle = null;
+    for (const b of document.querySelectorAll('#hud-effets .effet')) b.setAttribute('aria-expanded', 'false');
   }
 
   /** Main du joueur actif (mode avancé) : ses cartes Objet et Pouvoir, cliquables pour relire leur texte. */

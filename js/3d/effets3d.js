@@ -55,7 +55,7 @@ class Effets3D {
    */
   particules(centre, couleurs, type = 'eclat', duree = 2200) {
     if (this.mouvementReduit) return Promise.resolve();
-    const N = { eclat: 160, fumee: 90, confettis: 420, braises: 110 }[type];
+    const N = { eclat: 160, fumee: 90, confettis: 420, braises: 110, paillettes: 46 }[type];
     const pos = new Float32Array(N * 3), col = new Float32Array(N * 3), vit = [];
     const c = new THREE.Color();
     for (let i = 0; i < N; i++) {
@@ -68,6 +68,11 @@ class Effets3D {
       } else if (type === 'fumee') {
         x += (Math.random() - 0.5) * 1.6; z += (Math.random() - 0.5) * 1.6;
         v = new THREE.Vector3((Math.random() - 0.5) * 0.25, 0.5 + Math.random() * 0.8, (Math.random() - 0.5) * 0.25);
+      } else if (type === 'paillettes') {
+        // quelques points lumineux qui montent lentement en spirale autour du Complice
+        const a = Math.random() * Math.PI * 2, r = 0.25 + Math.random() * 0.35;
+        x += Math.cos(a) * r; z += Math.sin(a) * r; y += Math.random() * 0.3;
+        v = new THREE.Vector3(a, 0.35 + Math.random() * 0.45, r); // (angle, vitesse de montée, rayon)
       } else {
         const a = Math.random() * Math.PI * 2, r = type === 'braises' ? 0.6 + Math.random() * 1.6 : 0.4 + Math.random() * 1.4;
         v = new THREE.Vector3(Math.cos(a) * r, 1.4 + Math.random() * 2.6, Math.sin(a) * r);
@@ -79,7 +84,7 @@ class Effets3D {
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
     const mat = new THREE.PointsMaterial({
-      size: { eclat: 0.16, fumee: 0.55, confettis: 0.13, braises: 0.12 }[type],
+      size: { eclat: 0.16, fumee: 0.55, confettis: 0.13, braises: 0.12, paillettes: 0.1 }[type],
       map: this._texParticule(), vertexColors: true, transparent: true, depthWrite: false,
       blending: type === 'fumee' ? THREE.NormalBlending : THREE.AdditiveBlending,
     });
@@ -92,12 +97,17 @@ class Effets3D {
       for (let i = 0; i < N; i++) {
         const v = vit[i];
         if (type === 'eclat' || type === 'braises') v.y -= 2.2 * dt;
+        if (type === 'paillettes') {
+          v.x += dt * 1.1;
+          a[i * 3] = centre.x + Math.cos(v.x) * v.z; a[i * 3 + 2] = centre.z + Math.sin(v.x) * v.z; a[i * 3 + 1] += v.y * dt;
+          continue;
+        }
         if (type === 'confettis') { v.x = Math.sin(t * 9 + i) * 0.5; }
         a[i * 3] += v.x * dt; a[i * 3 + 1] += v.y * dt; a[i * 3 + 2] += v.z * dt;
         if (type === 'confettis' && a[i * 3 + 1] < this.HAUT + 0.05) a[i * 3 + 1] = this.HAUT + 0.05;
       }
       geo.attributes.position.needsUpdate = true;
-      mat.opacity = type === 'fumee' ? 0.55 * (1 - t) : (t < 0.75 ? 1 : 1 - (t - 0.75) / 0.25);
+      mat.opacity = type === 'fumee' ? 0.55 * (1 - t) : type === 'paillettes' ? Math.min(1, t * 5) * (1 - t) * (0.75 + Math.sin(t * 40) * 0.25) : (t < 0.75 ? 1 : 1 - (t - 0.75) / 0.25);
       if (type === 'fumee') mat.size = 0.55 + t * 0.6;
     }).then(() => { this.scene.remove(pts); geo.dispose(); mat.dispose(); });
   }

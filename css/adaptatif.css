@@ -20,15 +20,18 @@
   #hud-ordre { display: none; }
   .hud-outils { order: 2; gap: 4px; }
   .hud-outils .icone { width: 32px; height: 32px; font-size: 15px; border-radius: 8px; }
-  .hud-infos { order: 3; width: 100%; gap: 10px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; white-space: nowrap; }
+  .hud-infos { order: 3; width: 100%; gap: 4px 10px; flex-wrap: wrap; white-space: nowrap; }
+  #hud-effets { width: 100%; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  #hud-effets:empty { display: none; }
   .info:nth-child(3) > span { display: none; }
   .info { display: flex; align-items: baseline; gap: 4px; }
   .info > span { display: inline; font-size: 9px; letter-spacing: .5px; }
   .info b { font-size: 12.5px; }
-  #hud-effets span { font-size: 11px; padding: 2px 7px; }
+  #hud-effets .effet { font-size: 11px; padding: 2px 8px; white-space: nowrap; }
+  #hud-bulle { top: calc(100% + 6px); }
 
   /* Fiches des Complices : une rangée de 4 vignettes sous le HUD */
-  #fiches { top: calc(max(6px, env(safe-area-inset-top, 0px)) + 74px); left: 6px; right: 6px; width: auto; flex-direction: row; gap: 4px; }
+  #fiches { top: calc(max(6px, env(safe-area-inset-top, 0px)) + var(--hud-h, 68px) + 6px); left: 6px; right: 6px; width: auto; flex-direction: row; gap: 4px; }
   .fiche { flex: 1 1 0; min-width: 0; padding: 4px 5px; border-left-width: 3px; border-radius: 9px; }
   .fiche-tete { gap: 5px; }
   .fiche p { display: none; }
