@@ -52,8 +52,6 @@ body.cinema #main-joueur { opacity: 0; pointer-events: none; }
 /* « En savoir plus » et fiche détaillée d'une carte */
 .savoir-plus { display: inline-flex; align-items: center; gap: 4px; margin: 0 0 6px; padding: 6px 12px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent); background: transparent; color: var(--accent); font-size: 13.5px; font-weight: 600; }
 .savoir-plus:hover, .savoir-plus:focus-visible { background: color-mix(in srgb, var(--accent) 16%, transparent); color: #ffffff; }
-.dm-face .savoir-plus { align-self: center; margin: 8px 0 0; color: #0b5d75; border-color: #0b5d75; }
-.dm-face .savoir-plus:hover, .dm-face .savoir-plus:focus-visible { background: #e3f6fb; color: #063d4e; }
 .carte-rappel + b { display: block; margin-top: 2px; }
 
 .fiche-carte .fc-type { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--doux) !important; }
@@ -73,5 +71,9 @@ body.cinema #main-joueur { opacity: 0; pointer-events: none; }
 .mini-carte .etiquette { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--doux); }
 .mini-carte h3 { margin: 0; font-family: var(--titre); font-size: 18px; color: #ffffff; }
 .mini-carte p { margin: 0; font-size: 13.5px; line-height: 1.45; color: #d7dcf3; }
-.mini-carte .savoir-plus { align-self: flex-start; margin-top: 4px; }
 .mini-carte .btn { margin-top: auto; }
+
+/* liste repliable des cartes dans la fiche d'une case Objet / Pouvoir */
+.fc-liste { margin: 4px 0 12px; }
+.fc-liste summary { cursor: pointer; font-weight: 600; color: var(--accent); padding: 4px 0; }
+.fc-liste ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 5px; font-size: 13.5px; line-height: 1.4; }

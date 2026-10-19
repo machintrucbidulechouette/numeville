@@ -270,11 +270,20 @@ class AudioNumeville {
     this._ton({ type: 'sawtooth', f: midi(51), t: 0.3, duree: 1.8, vol: 0.05, filtre: 600, reverb: 0.4 }); // triton
   }
 
-  /** Fin de manche : gong (partiels inharmoniques). */
+  /** Fin de manche : souffle qui monte, gong (partiels inharmoniques) puis carillon doré quand la carte se soulève. */
   _finManche() {
+    this._bruitFiltre({ duree: 1.1, vol: 0.07, type: 'bandpass', f: 400, f2: 2600, Q: 2, attaque: 0.9 });
     [[110, 0.2], [158, 0.12], [207, 0.1], [281, 0.07], [377, 0.05]].forEach(([f, v]) =>
-      this._ton({ type: 'sine', f, duree: 3, vol: v, attaque: 0.01, reverb: 0.6 }));
-    this._bruitFiltre({ duree: 0.15, vol: 0.15, type: 'bandpass', f: 1200, Q: 1 });
+      this._ton({ type: 'sine', f, t: 0.35, duree: 3.2, vol: v, attaque: 0.01, reverb: 0.6 }));
+    this._bruitFiltre({ t: 0.35, duree: 0.15, vol: 0.15, type: 'bandpass', f: 1200, Q: 1 });
+    [76, 79, 83, 88].forEach((n, i) => this._ton({ type: 'sine', f: midi(n), t: 1.3 + i * 0.13, duree: 1.2, vol: 0.05, reverb: 0.8 }));
+  }
+
+  /** « Nuit blanche sur les écrans » : nappe nocturne, carillon et petits bips d'écrans qui s'allument. */
+  _nuit() {
+    [45, 52, 57, 60].forEach((n) => this._ton({ type: 'triangle', f: midi(n), duree: 3.6, attaque: 1.1, vol: 0.045, filtre: 1100, reverb: 0.7 }));
+    [84, 79, 76, 72].forEach((n, i) => this._ton({ type: 'sine', f: midi(n), t: 0.5 + i * 0.32, duree: 1.4, vol: 0.06, reverb: 0.8 }));
+    [1.6, 1.9, 2.1, 2.45, 2.7].forEach((t, i) => this._ton({ type: 'square', f: midi(91 + (i % 3) * 2), t, duree: 0.05, vol: 0.02, filtre: 3000 }));
   }
 
   /** Complice sauvé : accord lumineux + scintillement montant. */

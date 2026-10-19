@@ -5,7 +5,8 @@
    ===================================================================== */
 
 (function () {
-  // Coordonnées relevées sur le plateau imprimé (image 561 px, plateau de 17→543 / 15→542)
+  // Coordonnées relevées sur le plateau imprimé (image 561 px, plateau de 17→543 / 15→542),
+  // recalées au centre exact de chaque case octogonale sur la texture 2048 px
   const px = (x, y) => ({ u: (x - 17) / 526, v: (y - 15) / 527 });
 
   /* Les 4 Complices, dans l'ordre de leurs numéros de questions */
@@ -36,29 +37,29 @@
   /* Boucle du plateau, dans le sens horaire (index croissant = sens horaire).
      type : 'case' (case de quartier), 'face' (portrait du Complice : face-à-face), 'place' */
   const BOUCLE = [
-    { ...px(213, 65),  type: 'face',  c: 'stalky'  }, // 0
-    { ...px(315, 65),  type: 'case',  c: 'hyperco' }, // 1
-    { ...px(380, 95),  type: 'case',  c: 'hyperco' }, // 2
-    { ...px(398, 158), type: 'case',  c: 'hyperco' }, // 3  ← départ haut-droite
-    { ...px(497, 200), type: 'face',  c: 'hyperco' }, // 4
-    { ...px(500, 335), type: 'case',  c: 'hacker'  }, // 5
-    { ...px(430, 385), type: 'case',  c: 'hacker'  }, // 6  ← départ bas-droite
-    { ...px(397, 490), type: 'face',  c: 'hacker'  }, // 7
-    { ...px(277, 465), type: 'place', c: null      }, // 8
-    { ...px(172, 432), type: 'case',  c: 'datata'  }, // 9  ← départ bas-gauche
-    { ...px(52, 382),  type: 'case',  c: 'datata'  }, // 10
-    { ...px(125, 325), type: 'face',  c: 'datata'  }, // 11
-    { ...px(55, 237),  type: 'case',  c: 'stalky'  }, // 12
-    { ...px(90, 172),  type: 'case',  c: 'stalky'  }, // 13
-    { ...px(157, 155), type: 'case',  c: 'stalky'  }, // 14 ← départ haut-gauche
+    { ...px(214.8, 70.7),  type: 'face',  c: 'stalky'  }, // 0
+    { ...px(316.5, 66.3),  type: 'case',  c: 'hyperco' }, // 1
+    { ...px(380.6, 94.9),  type: 'case',  c: 'hyperco' }, // 2
+    { ...px(398.3, 158.9), type: 'case',  c: 'hyperco' }, // 3  ← départ haut-droite
+    { ...px(503.7, 201.3), type: 'face',  c: 'hyperco' }, // 4
+    { ...px(503.1, 339.2), type: 'case',  c: 'hacker'  }, // 5
+    { ...px(430.5, 389.4), type: 'case',  c: 'hacker'  }, // 6  ← départ bas-droite
+    { ...px(391.9, 494.9), type: 'face',  c: 'hacker'  }, // 7
+    { ...px(280.5, 469.6), type: 'place', c: null      }, // 8
+    { ...px(173, 432.3), type: 'case',  c: 'datata'  }, // 9  ← départ bas-gauche
+    { ...px(55.1, 384.1),  type: 'case',  c: 'datata'  }, // 10
+    { ...px(122.9, 328.6), type: 'face',  c: 'datata'  }, // 11
+    { ...px(57.3, 237.5),  type: 'case',  c: 'stalky'  }, // 12
+    { ...px(93.6, 174.1),  type: 'case',  c: 'stalky'  }, // 13
+    { ...px(156.7, 156.9), type: 'case',  c: 'stalky'  }, // 14 ← départ haut-gauche
   ];
 
   /* Cases départ (hors boucle) et la case de la boucle à laquelle elles mènent */
   const DEPARTS = [
-    { id: 'hg', ...px(200, 205), entree: 14 },
-    { id: 'hd', ...px(355, 205), entree: 3 },
-    { id: 'bd', ...px(355, 355), entree: 6 },
-    { id: 'bg', ...px(200, 355), entree: 9 },
+    { id: 'hg', ...px(205.3, 203.3), entree: 14 },
+    { id: 'hd', ...px(355.1, 202.8), entree: 3 },
+    { id: 'bd', ...px(354.7, 356.9), entree: 6 },
+    { id: 'bg', ...px(205.4, 357.7), entree: 9 },
   ];
 
   /* Emplacements des pioches Dark Master au centre du plateau */

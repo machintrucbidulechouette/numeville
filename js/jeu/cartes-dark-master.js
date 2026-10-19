@@ -132,6 +132,12 @@ class CartesDarkMaster {
       case 'nuitblanche':
         this.effetsProchains.nuitBlanche = true;
         ui.log('🌙 La prochaine manche, le premier dé noir entre 1 et 3 donnera une question difficile.');
+        if (this.plateau.cineNuitBlanche) {
+          this.son('nuit');
+          await this.cine(() => this.plateau.cineNuitBlanche(), '🌙 Nuit blanche sur les écrans',
+            'Numéville ne dort plus : à la prochaine manche, le premier dé noir de 1 à 3 donnera une question difficile.', '#9db8ff');
+        }
+        this.sync();
         break;
       case 'obsolescence':
         await this.retirer('hyperco', 'bleu', 1, c.titre);

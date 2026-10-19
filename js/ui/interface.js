@@ -171,11 +171,11 @@ class Interface {
   }
   fermer() { this.modale.classList.remove('ouverte'); this.modale.innerHTML = ''; }
 
-  /** @param {{type:string, carte:object, reste?:string}} [info] carte à expliquer (bouton « En savoir plus ») */
+  /** @param {{caseAvance:'objet'|'pouvoir'}} [info] case à expliquer (bouton « En savoir plus ») */
   choisir(titre, texte, options, info) {
     return new Promise((resolve) => {
       const c = el('div', {}, `<h2>${titre}</h2><p>${texte}</p>`);
-      if (info) c.appendChild(this._boutonSavoirPlus(info.type, info.carte, info.reste));
+      if (info && info.caseAvance) c.appendChild(this._boutonSavoirPlus(() => this.montrerCaseInfo(info.caseAvance)));
       const liste = el('div', { class: 'choix' });
       options.forEach((o, i) => liste.appendChild(el('button', {
         class: `btn option ${i === 0 ? 'principal' : ''}`, disabled: !!o.desactive,
@@ -186,8 +186,8 @@ class Interface {
     });
   }
 
-  _boutonSavoirPlus(type, carte, reste) {
-    return el('button', { class: 'savoir-plus', type: 'button', onclick: (e) => { e.stopPropagation(); this.montrerCarteInfo(type, carte, reste); } },
+  _boutonSavoirPlus(action) {
+    return el('button', { class: 'savoir-plus', type: 'button', onclick: (e) => { e.stopPropagation(); action(); } },
       'En savoir plus <span aria-hidden="true">›</span>');
   }
 
@@ -201,7 +201,7 @@ class Interface {
 
   /**
    * Quand une carte est piochée alors qu'on en a déjà une du même type :
-   * les deux cartes côte à côte, chacune avec « En savoir plus » et « Garder celle-ci ».
+   * les deux cartes côte à côte, chacune avec « Garder celle-ci ».
    */
   choisirCarteAGarder(type, nouvelle, ancienne, joueur, resteAncienne) {
     return new Promise((resolve) => {
@@ -210,7 +210,6 @@ class Interface {
       const grille = el('div', { class: 'choix-cartes' });
       for (const [carte, cle, etiquette, reste] of [[nouvelle, 'nouvelle', 'Nouvelle carte', null], [ancienne, 'ancienne', 'Carte actuelle', resteAncienne]]) {
         const bloc = el('div', { class: `mini-carte ${type}` }, `<span class="etiquette">${etiquette}</span><h3>${carte.titre}</h3><p>${carte.texte}</p>${reste ? `<p class="usage">${reste}</p>` : ''}`);
-        bloc.appendChild(this._boutonSavoirPlus(type, carte, reste || Interface.usageCarte(type, carte)));
         bloc.appendChild(el('button', { class: `btn ${cle === 'nouvelle' ? 'principal' : ''}`, onclick: () => { this.fermer(); resolve(cle); } }, 'Garder celle-ci'));
         grille.appendChild(bloc);
       }
@@ -325,7 +324,6 @@ class Interface {
           <div class="dm-illu" style="background-image:url(${IMG}dos-${type}.jpg)"></div>
         </div>`);
       const b = el('button', { class: 'btn principal', onclick: () => { this.fermer(); resolve(); } }, note ? 'Reprendre une carte' : 'Prendre la carte');
-      if (!note) $('.dm-face', c).appendChild(this._boutonSavoirPlus(type, carte, Interface.usageCarte(type, carte)));
       $('.dm-face', c).appendChild(b);
       this.ouvrir(c, 'dm');
       setTimeout(() => { c.classList.add('retournee'); if (window.NV_AUDIO) NV_AUDIO.effet('retourne'); }, 60);
@@ -350,6 +348,38 @@ class Interface {
       const reste = jeu.libelleReste(p) + (p.reste === 'manche' && j.maitreUtilise ? ' (déjà utilisé cette manche)' : '');
       zone.appendChild(el('button', { class: 'puce-carte pouvoir', title: p.carte.texte, onclick: () => this.montrerCarteInfo('pouvoir', p.carte, reste) }, `⚡ ${p.carte.titre} <small>${reste}</small>`));
     }
+  }
+
+  /** Fiche « En savoir plus » des écrans de placement : à quoi servent la case Objet et la case Pouvoir. */
+  montrerCaseInfo(type) {
+    const objet = type === 'objet';
+    const cartes = objet ? NV.OBJETS : NV.POUVOIRS;
+    const liste = cartes.map((c) => `<li><b>${c.titre}</b> — ${c.texte}</li>`).join('');
+    const sections = objet ? [
+      ['📍 C’est quoi ?', 'Une case du plateau que vous choisissez ensemble. Un marqueur <b>Objet</b> y reste posé toute la partie.'],
+      ['🎴 Quand on s’y arrête', 'L’Éclaireur qui <b>termine son déplacement</b> sur cette case pioche une <b>carte Objet</b> (passer dessus sans s’arrêter ne compte pas).'],
+      ['✋ Combien de cartes', 'Chaque Éclaireur garde <b>1 Objet au maximum</b>. S’il en a déjà un, il choisit lequel garder ; l’autre est défaussé.'],
+      ['🔁 Utilisation', '<b>Usage unique</b> : on joue l’Objet au bon moment (le jeu te le propose), puis il est défaussé.'],
+      ['💡 Bien la placer', 'Choisissez une case souvent atteinte, par exemple près de La Place ou dans le quartier d’un Complice en difficulté.'],
+    ] : [
+      ['📍 C’est quoi ?', 'Une autre case du plateau, choisie ensemble. Un marqueur <b>Pouvoir</b> y reste posé toute la partie.'],
+      ['🎴 Quand on s’y arrête', 'L’Éclaireur qui <b>termine son déplacement</b> sur cette case pioche une <b>carte Pouvoir</b> (passer dessus sans s’arrêter ne compte pas).'],
+      ['✋ Combien de cartes', 'Chaque Éclaireur garde <b>1 Pouvoir au maximum</b>, en plus de son éventuel Objet. S’il en a déjà un, il choisit lequel garder.'],
+      ['🔁 Utilisation', 'Un Pouvoir dure plus longtemps qu’un Objet : <b>plusieurs utilisations</b>, <b>une fois par manche</b> ou <b>permanent</b> selon la carte.'],
+      ['💡 Bien la placer', 'Éloignez-la de la case Objet pour que les deux soient atteintes par des joueurs différents.'],
+    ];
+    const couche = $('#aide');
+    couche.innerHTML = '';
+    const boite = el('div', { class: `boite petite fiche-carte ${type}` }, `
+      <p class="fc-type">${objet ? '🧰 Mode avancé' : '⚡ Mode avancé'}</p>
+      <h2>La case ${objet ? 'Objet' : 'Pouvoir'}</h2>
+      <dl>${sections.map(([t, d]) => `<div><dt>${t}</dt><dd>${d}</dd></div>`).join('')}</dl>
+      <details class="fc-liste"><summary>Voir les ${cartes.length} cartes ${objet ? 'Objet' : 'Pouvoir'}</summary><ul>${liste}</ul></details>`);
+    const fermer = el('button', { class: 'btn principal', onclick: () => this.fermerAide() }, 'Fermer');
+    boite.appendChild(fermer);
+    couche.appendChild(boite);
+    couche.classList.add('ouverte');
+    fermer.focus({ preventScroll: true });
   }
 
   /** Relire une carte de sa main (couche d'aide : n'interrompt pas l'action en cours). */

@@ -128,14 +128,21 @@ class Complices3D {
       groupe.add(embleme);
 
       this.scene.add(groupe);
-      this.figures[id] = { groupe, pivot, buste, matBuste, matScan, anneau, faisceau, embleme, tex, statut: 'actif', phase: i * 1.7 };
+      // fin rayon qui relie le socle à l'hologramme quand celui-ci s'écarte d'un pion
+      const lien = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 1, 8, 1, true),
+        new THREE.MeshBasicMaterial({ color: c.couleurClaire, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false }));
+      lien.renderOrder = 1;
+      groupe.add(lien);
+
+      this.scene.add(groupe);
+      this.figures[id] = { groupe, pivot, buste, matBuste, matScan, anneau, faisceau, embleme, lien, tex, statut: 'actif', phase: i * 1.7, decal: new THREE.Vector3() };
     });
   }
 
   /** Position (au niveau du buste) d'un Complice 3D : utile pour cadrer les cinématiques. */
   posFigure(id, hauteur = 0.72) {
     const f = this.figures && this.figures[id];
-    return f ? f.groupe.position.clone().setY(this.HAUT + hauteur) : this.posCase(0);
+    return f ? f.groupe.position.clone().add(f.decal).setY(this.HAUT + hauteur) : this.posCase(0);
   }
 
   /** Transformation du Complice : le buste « grésille » puis change d'apparence. */
@@ -163,11 +170,63 @@ class Complices3D {
     }, this.cinematiques ? 1150 : 0);
   }
 
+  /**
+   * Décalage latéral (en unités 3D) pour que l'hologramme ne soit pas masqué par un pion vu depuis
+   * la caméra : on compare leurs rectangles à l'écran et on pousse l'hologramme du côté libre.
+   * Calculé depuis la position de repos du Complice, pour ne pas osciller.
+   */
+  _decalageHologramme(f) {
+    const cam = this.camera, g = f.groupe.position;
+    const droite = new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld, 0).setY(0);
+    if (droite.lengthSq() < 1e-6) return null;
+    droite.normalize();
+    const ecran = (v) => { const p = v.clone().project(cam); return { x: p.x, y: p.y, z: p.z }; };
+    const centre = new THREE.Vector3(g.x, this.HAUT + 0.72, g.z);
+    const cF = ecran(centre), dF = ecran(centre.clone().addScaledVector(droite, 0.56));
+    const demiL = Math.abs(dF.x - cF.x);                       // demi-largeur du buste à l'écran
+    if (demiL < 1e-4 || cF.z > 1) return null;
+    const hautF = ecran(new THREE.Vector3(g.x, this.HAUT + 1.5, g.z)).y, basF = ecran(new THREE.Vector3(g.x, this.HAUT + 0.3, g.z)).y;
+    let besoin = 0, sens = 0;
+    for (const pion of Object.values(this.pions)) {
+      const q = pion.position;
+      if (Math.hypot(q.x - g.x, q.z - g.z) > 2.6) continue;
+      const pB = ecran(new THREE.Vector3(q.x, this.HAUT, q.z)), pH = ecran(new THREE.Vector3(q.x, this.HAUT + 1.45, q.z));
+      const pD = ecran(new THREE.Vector3(q.x, this.HAUT + 1.12, q.z).addScaledVector(droite, 0.36));
+      const demiP = Math.abs(pD.x - pH.x);
+      const chevaucheY = Math.min(hautF, pH.y) - Math.max(basF, pB.y) > 0;
+      const ecart = cF.x - pH.x;
+      const recouvre = demiL + demiP - Math.abs(ecart);
+      if (!chevaucheY || recouvre <= 0) continue;
+      const s = Math.abs(ecart) < 1e-3 ? (cF.x >= 0 ? -1 : 1) : Math.sign(ecart);
+      const n = (recouvre + demiL * 0.15) / demiL * 0.56; // converti en unités 3D
+      if (n > besoin) { besoin = n; sens = s; }
+    }
+    return droite.multiplyScalar(Math.min(besoin, 1.15) * sens);
+  }
+
   _animerFigures(temps) {
     if (!this.figures) return;
+    const dt = Math.min(0.1, temps - (this._tFig || temps));
+    this._tFig = temps;
+    this.camera.updateMatrixWorld();
     for (const f of Object.values(this.figures)) {
       const g = f.groupe.position;
-      f.pivot.rotation.y = Math.atan2(this.camera.position.x - g.x, this.camera.position.z - g.z);
+      const cible = this._decalageHologramme(f) || new THREE.Vector3();
+      f.decal.lerp(cible, 1 - Math.exp(-dt * 5));
+      f.pivot.position.x = f.decal.x; f.pivot.position.z = f.decal.z;
+      f.embleme.position.x = f.decal.x; f.embleme.position.z = f.decal.z;
+      // rayon lumineux du socle vers l'hologramme déplacé
+      const ecart = Math.hypot(f.decal.x, f.decal.z);
+      f.lien.visible = ecart > 0.05;
+      if (f.lien.visible) {
+        const de = new THREE.Vector3(0, 0.13, 0), vers = new THREE.Vector3(f.decal.x, 0.45, f.decal.z);
+        const v = vers.clone().sub(de);
+        f.lien.position.copy(de).addScaledVector(v, 0.5);
+        f.lien.scale.set(1, v.length(), 1);
+        f.lien.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), v.normalize());
+        f.lien.material.opacity = Math.min(0.6, ecart);
+      }
+      f.pivot.rotation.y = Math.atan2(this.camera.position.x - (g.x + f.decal.x), this.camera.position.z - (g.z + f.decal.z));
       f.pivot.position.y = 0.72 + Math.sin(temps * 1.4 + f.phase) * 0.035;
       f.anneau.rotation.z = temps * 0.8 + f.phase;
       f.embleme.position.y = 1.36 + Math.sin(temps * 2 + f.phase) * 0.05;

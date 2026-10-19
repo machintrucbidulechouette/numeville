@@ -66,6 +66,8 @@ class Jeu {
   compte(statut) { return NV.ORDRE_COMPLICES.filter((id) => this.complices[id].statut === statut).length; }
   sync() {
     if (!this.fin && window.NV_AUDIO) NV_AUDIO.definirFond(this.ambianceDeFond());
+    // ambiance de nuit tant que « Nuit blanche sur les écrans » est programmée ou active
+    if (this.plateau.ambianceNuit) this.plateau.ambianceNuit(!this.fin && !!((this.effets && this.effets.nuitBlanche) || (this.effetsProchains && this.effetsProchains.nuitBlanche)));
     this.plateau.majJetons(this.complices);
     this.plateau.majPioches(this.piocheFin.length, Math.min(this.piocheAttaque.length, 15));
     this.ui.majHUD(this);

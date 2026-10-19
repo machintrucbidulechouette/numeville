@@ -314,17 +314,62 @@ class Plateau3D {
     return groupe;
   }
 
+  /* Plusieurs pions sur la même case : ils se répartissent autour du centre au lieu de se superposer. */
+  _cleCase(joueur) { return joueur.case === null ? 'd' + joueur.depart : joueur.case; }
+  _centreCle(cle) { return typeof cle === 'string' ? this.posDepart(Number(cle.slice(1))) : this.posCase(cle); }
+  _occupants(cle) {
+    return Object.keys(this.pions).filter((id) => this.pions[id].userData.cle === cle).sort().map((id) => this.pions[id]);
+  }
+  /** Emplacement du rang-ième pion parmi n sur une case (1 pion : pile au centre). */
+  _posEmplacement(cle, rang, n) {
+    const c = this._centreCle(cle);
+    if (n <= 1) return c;
+    const r = n === 2 ? 0.17 : 0.2;
+    const a0 = n === 2 ? 0 : n === 3 ? -Math.PI / 2 : Math.PI / 4;
+    const a = a0 + rang * (Math.PI * 2 / n);
+    return c.clone().add(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r));
+  }
+  /** Replace tous les pions d'une case (en glissant si `duree`), sauf `sauf` qui est en train d'y sauter. */
+  _ranger(cle, duree = 0, sauf = null) {
+    if (cle === null || cle === undefined) return;
+    const occ = this._occupants(cle);
+    occ.forEach((pion, rang) => {
+      if (pion === sauf) return;
+      const b = this._posEmplacement(cle, rang, occ.length);
+      if (!duree) { pion.position.set(b.x, this.HAUT, b.z); return; }
+      const a = pion.position.clone();
+      this.animer(duree, (t) => { const k = Plateau3D.ease(t); pion.position.set(a.x + (b.x - a.x) * k, this.HAUT, a.z + (b.z - a.z) * k); });
+    });
+  }
+
   placerPion(joueur) {
-    const p = joueur.case === null ? this.posDepart(joueur.depart) : this.posCase(joueur.case);
-    this.pions[joueur.id].position.copy(p);
+    const pion = this.pions[joueur.id];
+    const avant = pion.userData.cle;
+    pion.userData.cle = this._cleCase(joueur);
+    if (avant !== undefined && avant !== pion.userData.cle) this._ranger(avant);
+    this._ranger(pion.userData.cle);
   }
 
   /** Fait sauter le pion de case en case (liste d'index de la boucle). */
   async deplacerPion(joueur, chemin) {
     const pion = this.pions[joueur.id];
-    for (const idx of chemin) {
+    if (!chemin.length) return;
+    // il quitte sa case : ceux qui restent se recentrent
+    const depart = pion.userData.cle;
+    pion.userData.cle = null;
+    this._ranger(depart, 260);
+    for (let i = 0; i < chemin.length; i++) {
+      const idx = chemin[i];
+      const dernier = i === chemin.length - 1;
+      let b = this.posCase(idx);
+      if (dernier) {
+        // dernière case : il prend sa place à côté des pions déjà là, qui s'écartent
+        pion.userData.cle = idx;
+        const occ = this._occupants(idx);
+        b = this._posEmplacement(idx, occ.indexOf(pion), occ.length);
+        this._ranger(idx, 260, pion);
+      }
       const a = pion.position.clone();
-      const b = this.posCase(idx);
       this._son('pas');
       await this.animer(260, (t) => {
         const k = Plateau3D.ease(t);
@@ -607,6 +652,8 @@ class Plateau3D {
     for (const z of Object.values(this.jetons)) if (z.badge) z.badge.position.y = 0.95 + Math.sin(temps * 2) * 0.05;
     this._animerFigures(temps);
     this._animerMarqueursAvance(temps);
+    this._appliquerAmbiance(temps, Math.min(0.1, temps - (this._tAmb ?? temps)));
+    this._tAmb = temps;
     this.controles.update();
     this.renderer.render(this.scene, this.camera);
   }

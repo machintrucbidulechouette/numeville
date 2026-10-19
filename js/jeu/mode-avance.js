@@ -32,8 +32,8 @@ class ModeAvance {
     if (!this.avance) return;
     const toutes = NV.BOUCLE.map((_, i) => i);
     this.ui.log('🧰 Mode avancé : choisissez la case Objet et la case Pouvoir.');
-    this.caseObjet = await this.choisirCase('Case Objet', 'Mettez-vous d’accord sur une case du plateau : elle devient la <b>case Objet</b> (le pion Objet n’en bougera plus).', toutes);
-    this.casePouvoir = await this.choisirCase('Case Pouvoir', 'Choisissez maintenant une autre case : elle devient la <b>case Pouvoir</b>.', toutes.filter((i) => i !== this.caseObjet));
+    this.caseObjet = await this.choisirCase('Case Objet', 'Mettez-vous d’accord sur une case du plateau : elle devient la <b>case Objet</b> (le pion Objet n’en bougera plus).', toutes, true, 'objet');
+    this.casePouvoir = await this.choisirCase('Case Pouvoir', 'Choisissez maintenant une autre case : elle devient la <b>case Pouvoir</b>.', toutes.filter((i) => i !== this.caseObjet), true, 'pouvoir');
     this.plateau.placerMarqueurAvance('objet', this.caseObjet);
     this.plateau.placerMarqueurAvance('pouvoir', this.casePouvoir);
     this.ui.log(`🧰 Case Objet : ${this.descCase(this.caseObjet)} · ⚡ Case Pouvoir : ${this.descCase(this.casePouvoir)}.`);
@@ -54,8 +54,11 @@ class ModeAvance {
     return `Quartier de ${this.nomC(c.c)} — case ${rang}`;
   }
 
-  /** Choix d'une case en deux temps : le quartier, puis la case (ou « au hasard »). */
-  async choisirCase(titre, texte, indices, hasard = true) {
+  /**
+   * Choix d'une case en deux temps : le quartier, puis la case (ou « au hasard »).
+   * @param {'objet'|'pouvoir'} [aide] ajoute « En savoir plus » expliquant la case Objet / Pouvoir
+   */
+  async choisirCase(titre, texte, indices, hasard = true, aide = null) {
     const groupes = [];
     for (const i of indices) {
       const c = NV.BOUCLE[i];
@@ -66,11 +69,12 @@ class ModeAvance {
     }
     const options = groupes.map((g) => ({ label: g.cle === 'place' ? '🔀 La Place' : `Quartier de ${this.nomC(g.cle)}`, valeur: g.cle }));
     if (hasard) options.push({ label: '🎲 Au hasard', valeur: '__hasard' });
-    const g = await this.ui.choisir(titre, texte, options);
+    const info = aide ? { caseAvance: aide } : undefined;
+    const g = await this.ui.choisir(titre, texte, options, info);
     if (g === '__hasard') return indices[Math.floor(Math.random() * indices.length)];
     const cases = groupes.find((x) => x.cle === g).cases;
     if (cases.length === 1) return cases[0];
-    return this.ui.choisir(titre, 'Sur quelle case ?', cases.map((i) => ({ label: this.libelleCase(i), valeur: i })));
+    return this.ui.choisir(titre, 'Sur quelle case ?', cases.map((i) => ({ label: this.libelleCase(i), valeur: i })), info);
   }
 
   quartiersActifsOuTous() { return NV.ORDRE_COMPLICES; }
@@ -111,10 +115,9 @@ class ModeAvance {
   /** Demande au détenteur s'il joue sa carte maintenant. */
   async proposer(j, carte, type, question, oui = 'Utiliser', non = 'Pas maintenant') {
     const icone = type === 'objet' ? '🧰' : '⚡';
-    const reste = type === 'pouvoir' && j.pouvoir && j.pouvoir.carte === carte ? this.libelleReste(j.pouvoir) : null;
     const r = await this.ui.choisir(`${icone} ${carte.titre}`,
       `<span class="carte-rappel">${carte.texte}</span><b>${j.nom}</b>, ${question}`,
-      [{ label: oui, valeur: true }, { label: non, valeur: false }], { type, carte, reste });
+      [{ label: oui, valeur: true }, { label: non, valeur: false }]);
     return r;
   }
 
