@@ -99,6 +99,7 @@ class Plateau3D {
     this._des();
     this._zonesJetons();
     this._pioches();
+    this._complices3D();
 
     window.addEventListener('resize', () => this.redimensionner());
     r.setAnimationLoop(() => this._boucle());
@@ -344,14 +345,18 @@ class Plateau3D {
   }
 
   /**
-   * Recentre en douceur la vue sur la zone du plateau où se trouve le pion du joueur actif :
-   * la cible glisse vers le pion (32 %) et la caméra tourne légèrement de son côté.
-   * Le centre du plateau (dés, pioches) reste toujours visible.
+   * Recentre en douceur la vue sur la zone du pion du joueur actif (ou sur `vers`, sa case
+   * d'arrivée pendant un déplacement) : la cible glisse vers le pion (32 %) et la caméra
+   * tourne légèrement de son côté. Le centre du plateau (dés, pioches) reste visible.
+   * Ignoré seulement pendant une cinématique en cours.
    */
-  vueJoueur(joueur, duree = 1100) {
+  vueJoueur(joueur, duree = 1100, vers = null) {
     const pion = joueur && this.pions[joueur.id];
-    if (!pion || !this.controles.enabled || this._vue) return Promise.resolve(); // pas pendant une cinématique
-    const p = pion.position;
+    if (!pion || this.enCinematique) return Promise.resolve();
+    // une vue mémorisée qui traîne (cinématique passée ou coupée) ne doit pas bloquer le recentrage
+    this._vue = null;
+    this.controles.enabled = true;
+    const p = vers || pion.position;
     const cible = this.VUE.cible.clone().lerp(new THREE.Vector3(p.x, 0, p.z), 0.32);
     const lacet = THREE.MathUtils.clamp(p.x * 0.045, -0.22, 0.22);
     const decalage = this.VUE.pos.clone().sub(this.VUE.cible).applyAxisAngle(new THREE.Vector3(0, 1, 0), lacet);
@@ -363,12 +368,12 @@ class Plateau3D {
   _glisserVue(pos, cible, duree) {
     const id = ++this._idVue;
     const a = this.camera.position.clone(), ta = this.controles.target.clone();
-    return this.animer(duree, (t) => {
+    return this._cameraPrise(this.animer(duree, (t) => {
       if (id !== this._idVue) return;
       const k = Plateau3D.ease(t);
       this.camera.position.lerpVectors(a, pos, k);
       this.controles.target.lerpVectors(ta, cible, k);
-    });
+    }));
   }
 
   montrerDestinations(indices, couleurs) {
@@ -433,6 +438,7 @@ class Plateau3D {
         z.badge = this._badge(id, e.statut);
       }
       if (e.statut === 'actif' && z.badge) { this.scene.remove(z.badge); z.badge = null; }
+      if (e.statut !== 'actif') this._majFigure(id, e.statut);
       const lum = NV.COMPLICES[id]._lumiere;
       if (lum) lum.intensity = e.statut === 'perdu' ? 1.5 : e.statut === 'sauve' ? 12 : 6;
     }
@@ -510,6 +516,177 @@ class Plateau3D {
     this.scene.remove(m);
   }
 
+
+  /* ---------- Les 4 Complices en 3D ---------- */
+  // Chaque Complice se dresse derrière son portrait sur la boucle : un socle lumineux,
+  // un buste holographique (illustration du jeu) toujours tourné vers la caméra
+  // et son emblème qui tourne au-dessus. Le buste change quand il est sauvé ou perdu.
+
+  _embleme(id, couleur) {
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 256;
+    const g = cv.getContext('2d');
+    g.fillStyle = couleur;
+    g.beginPath(); g.arc(128, 128, 116, 0, Math.PI * 2); g.fill();
+    g.lineWidth = 14; g.strokeStyle = '#ffffff'; g.stroke();
+    g.fillStyle = '#ffffff'; g.strokeStyle = '#ffffff';
+    g.save(); g.translate(128, 132);
+    if (id === 'stalky') { // cœur
+      g.beginPath(); g.moveTo(0, 52);
+      g.bezierCurveTo(-78, 0, -58, -62, 0, -26);
+      g.bezierCurveTo(58, -62, 78, 0, 0, 52); g.fill();
+    } else if (id === 'hyperco') { // éclair
+      g.beginPath(); g.moveTo(14, -70); g.lineTo(-38, 8); g.lineTo(-4, 8); g.lineTo(-16, 70); g.lineTo(38, -10); g.lineTo(4, -10); g.closePath(); g.fill();
+    } else if (id === 'hacker') { // crâne
+      g.beginPath(); g.arc(0, -10, 50, Math.PI * 0.85, Math.PI * 0.15); g.lineTo(26, 46); g.lineTo(-26, 46); g.closePath(); g.fill();
+      g.fillStyle = couleur;
+      g.beginPath(); g.arc(-20, -8, 13, 0, Math.PI * 2); g.arc(20, -8, 13, 0, Math.PI * 2); g.fill();
+      g.fillRect(-4, 14, 8, 14);
+    } else { // œil (Datata)
+      g.lineWidth = 12;
+      g.beginPath(); g.moveTo(-66, 0); g.quadraticCurveTo(0, -60, 66, 0); g.quadraticCurveTo(0, 60, -66, 0); g.stroke();
+      g.beginPath(); g.arc(0, 0, 22, 0, Math.PI * 2); g.fill();
+    }
+    g.restore();
+    const t = new THREE.CanvasTexture(cv);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  }
+
+  _texScanlines() {
+    const cv = document.createElement('canvas');
+    cv.width = 4; cv.height = 64;
+    const g = cv.getContext('2d');
+    for (let y = 0; y < 64; y += 4) { g.fillStyle = 'rgba(255,255,255,.55)'; g.fillRect(0, y, 4, 1.5); }
+    const t = new THREE.CanvasTexture(cv);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(1, 6);
+    return t;
+  }
+
+  /** Version « perdue » du buste : niveaux de gris teintés de rouge, calculée une fois. */
+  _texPerdu(src) {
+    const cv = document.createElement('canvas');
+    cv.width = 320; cv.height = 240;
+    const tex = new THREE.CanvasTexture(cv);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const img = new Image();
+    img.onload = () => {
+      const g = cv.getContext('2d');
+      g.drawImage(img, 0, 0, 320, 240);
+      const d = g.getImageData(0, 0, 320, 240);
+      for (let i = 0; i < d.data.length; i += 4) {
+        const l = 0.3 * d.data[i] + 0.59 * d.data[i + 1] + 0.11 * d.data[i + 2];
+        d.data[i] = Math.min(255, l * 0.9 + 40); d.data[i + 1] = l * 0.35; d.data[i + 2] = l * 0.4;
+      }
+      g.putImageData(d, 0, 0);
+      tex.needsUpdate = true;
+    };
+    img.src = src;
+    return tex;
+  }
+
+  _complices3D() {
+    this.figures = {};
+    const sources = window.NV_TEXTURES_COMPLICES || {};
+    const scan = this._texScanlines();
+    const geoSocle = new THREE.CylinderGeometry(0.3, 0.38, 0.12, 40);
+    const matSocle = new THREE.MeshStandardMaterial({ color: '#151b36', roughness: 0.35, metalness: 0.7 });
+    NV.ORDRE_COMPLICES.forEach((id, i) => {
+      const c = NV.COMPLICES[id];
+      const iCase = NV.BOUCLE.findIndex((b) => b.type === 'face' && b.c === id);
+      const pCase = this.posCase(iCase);
+      const dehors = new THREE.Vector3(pCase.x, 0, pCase.z).normalize();
+      const base = pCase.clone().add(dehors.multiplyScalar(0.66));
+      // le socle reste entièrement sur le plateau
+      base.x = THREE.MathUtils.clamp(base.x, -4.55, 4.55);
+      base.z = THREE.MathUtils.clamp(base.z, -4.55, 4.55);
+      const groupe = new THREE.Group();
+      groupe.position.copy(base);
+
+      const socle = new THREE.Mesh(geoSocle, matSocle);
+      socle.position.y = 0.06; socle.castShadow = true; socle.receiveShadow = true;
+      const anneau = new THREE.Mesh(new THREE.TorusGeometry(0.31, 0.022, 10, 48),
+        new THREE.MeshBasicMaterial({ color: c.couleur }));
+      anneau.rotation.x = Math.PI / 2; anneau.position.y = 0.125;
+      const faisceau = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.32, 1.2, 32, 1, true),
+        new THREE.MeshBasicMaterial({ color: c.couleur, transparent: true, opacity: 0.1, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+      faisceau.position.y = 0.72;
+      groupe.add(socle, anneau, faisceau);
+
+      // le buste tourne seulement autour de l'axe vertical pour toujours faire face à la caméra
+      const pivot = new THREE.Group();
+      pivot.position.y = 0.72;
+      const tex = {
+        actif: sources[id] ? this.chargerTexture(sources[id].actif) : null,
+        sauve: sources[id] ? this.chargerTexture(sources[id].sauve) : null,
+        perdu: sources[id] ? this._texPerdu(sources[id].actif) : null,
+      };
+      const matBuste = new THREE.MeshBasicMaterial({ map: tex.actif, transparent: true, opacity: 0.92, side: THREE.DoubleSide, depthWrite: false, toneMapped: false });
+      const buste = new THREE.Mesh(new THREE.PlaneGeometry(1.12, 0.84), matBuste);
+      buste.renderOrder = 2;
+      const matScan = new THREE.MeshBasicMaterial({ map: scan, color: c.couleurClaire, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+      const balayage = new THREE.Mesh(new THREE.PlaneGeometry(1.12, 0.84), matScan);
+      balayage.position.z = 0.002; balayage.renderOrder = 3;
+      pivot.add(buste, balayage);
+      groupe.add(pivot);
+
+      const embleme = new THREE.Sprite(new THREE.SpriteMaterial({ map: this._embleme(id, c.couleur), transparent: true }));
+      embleme.scale.setScalar(0.34);
+      embleme.position.y = 1.36;
+      groupe.add(embleme);
+
+      this.scene.add(groupe);
+      this.figures[id] = { groupe, pivot, buste, matBuste, matScan, anneau, faisceau, embleme, tex, statut: 'actif', phase: i * 1.7 };
+    });
+  }
+
+  /** Position (au niveau du buste) d'un Complice 3D : utile pour cadrer les cinématiques. */
+  posFigure(id, hauteur = 0.72) {
+    const f = this.figures && this.figures[id];
+    return f ? f.groupe.position.clone().setY(this.HAUT + hauteur) : this.posCase(0);
+  }
+
+  /** Transformation du Complice : le buste « grésille » puis change d'apparence. */
+  _majFigure(id, statut) {
+    const f = this.figures && this.figures[id];
+    if (!f || f.statut === statut) return;
+    f.statut = statut;
+    const c = NV.COMPLICES[id];
+    // la transformation démarre quand la caméra arrive (cinématique d'environ 1,2 s)
+    setTimeout(() => {
+      this.animer(900, (t) => {
+        f.matBuste.opacity = Math.random() < 0.5 ? 0.2 : 0.95;
+        f.pivot.scale.set(1 + (Math.random() - 0.5) * 0.12 * (1 - t), 1, 1);
+        if (t > 0.5 && f.matBuste.map !== f.tex[statut]) { f.matBuste.map = f.tex[statut]; f.matBuste.needsUpdate = true; }
+      }).then(() => {
+        f.pivot.scale.set(1, 1, 1);
+        f.matBuste.opacity = statut === 'sauve' ? 1 : 0.85;
+        f.anneau.material.color.set(statut === 'sauve' ? '#ffffff' : '#ff2a3a');
+        f.faisceau.material.color.set(statut === 'sauve' ? c.couleurClaire : '#ff2a3a');
+        f.faisceau.material.opacity = statut === 'sauve' ? 0.22 : 0.08;
+        f.matScan.opacity = statut === 'sauve' ? 0.05 : 0.3;
+        f.matScan.color.set(statut === 'sauve' ? '#ffffff' : '#ff3a44');
+        f.embleme.material.color.set(statut === 'sauve' ? '#ffffff' : '#555555');
+      });
+    }, this.cinematiques ? 1150 : 0);
+  }
+
+  _animerFigures(temps) {
+    if (!this.figures) return;
+    for (const f of Object.values(this.figures)) {
+      const g = f.groupe.position;
+      f.pivot.rotation.y = Math.atan2(this.camera.position.x - g.x, this.camera.position.z - g.z);
+      f.pivot.position.y = 0.72 + Math.sin(temps * 1.4 + f.phase) * 0.035;
+      f.anneau.rotation.z = temps * 0.8 + f.phase;
+      f.embleme.position.y = 1.36 + Math.sin(temps * 2 + f.phase) * 0.05;
+      f.embleme.material.rotation = Math.sin(temps * 0.9 + f.phase) * 0.25;
+      f.matScan.map.offset.y = -temps * 0.12;
+      // léger scintillement d'hologramme (plus nerveux quand le Complice est perdu)
+      if (f.statut === 'actif') f.matBuste.opacity = 0.86 + Math.sin(temps * 13 + f.phase) * 0.04 + (Math.random() < 0.01 ? -0.4 : 0);
+      else if (f.statut === 'perdu') f.matBuste.opacity = Math.random() < 0.04 ? 0.25 : 0.82;
+    }
+  }
 
   /* ---------- Petites animations de retour visuel ---------- */
 
@@ -622,15 +799,21 @@ class Plateau3D {
     if (!this._vue) this._vue = { pos: this.camera.position.clone(), cible: this.controles.target.clone() };
   }
 
+  /** Signale une animation de caméra : les contrôles à la souris ne la perturbent pas. */
+  _cameraPrise(promesse) {
+    this._occupee = (this._occupee || 0) + 1;
+    return promesse.finally(() => { this._occupee--; });
+  }
+
   /** Déplace la caméra vers (pos, cible) en douceur. */
   voler(pos, cible, duree = 1200) {
     this._idVue++; // annule un recentrage en cours
     const a = this.camera.position.clone(), ta = this.controles.target.clone();
-    return this.animer(duree, (t) => {
+    return this._cameraPrise(this.animer(duree, (t) => {
       const k = Plateau3D.ease(t);
       this.camera.position.lerpVectors(a, pos, k);
       this.controles.target.lerpVectors(ta, cible, k);
-    }, true);
+    }, true));
   }
 
   async revenirVue(duree = 1000) {
@@ -640,50 +823,95 @@ class Plateau3D {
     this.controles.enabled = true;
   }
 
-  /** Plan rapproché sur un point du plateau (vu depuis le côté joueur). */
+  /** Plan rapproché sur un point du plateau, vu depuis le côté des joueurs. */
   async plan(cible, recul = 3.2, hauteur = 3.4, duree = 1200) {
     this.controles.enabled = false;
     const pos = cible.clone().add(new THREE.Vector3(cible.x * 0.12, hauteur, recul));
     await this.voler(pos, cible, duree);
   }
 
-  /** Ouverture : survol de Numéville puis descente vers la vue de jeu. */
-  async cineIntro() {
+  /**
+   * Ouverture : tour complet du plateau. La caméra plonge vers chaque Complice
+   * (zoom avant, courte pause), remonte entre deux quartiers (zoom arrière),
+   * puis se pose sur la vue de jeu. `etape(id)` permet de mettre à jour la légende.
+   */
+  async cineIntro(etape = () => {}) {
     this.controles.enabled = false;
-    const fin = this.VUE.pos.clone(), cibleFin = this.VUE.cible.clone();
-    const rFin = Math.hypot(fin.x, fin.z - cibleFin.z), aFin = Math.atan2(fin.x, fin.z - cibleFin.z);
-    const a0 = aFin - 2.2;
-    await this.animer(5200, (t) => {
-      const k = Plateau3D.ease(t);
-      const ang = a0 + (aFin - a0) * k;
-      const r = 17 + (rFin - 17) * k;
-      const h = 17 + (fin.y - 17) * k;
-      const cz = cibleFin.z * k;
-      this.camera.position.set(Math.sin(ang) * r, h, cz + Math.cos(ang) * r);
-      this.controles.target.set(0, 0, cz);
-    }, true);
-    this.camera.position.copy(fin);
-    this.controles.target.copy(cibleFin);
+    this._idVue++;
+    const ordre = ['hacker', 'hyperco', 'stalky', 'datata']; // sens antihoraire depuis le côté des joueurs
+    const C = new THREE.Vector3(0, 0, 0);
+    const pts = [new THREE.Vector3(0, 21, 17)], cibles = [new THREE.Vector3(0, 0, 0)], arrets = [];
+    const dirDe = (id) => { const p = this.posFigure(id); return new THREE.Vector3(p.x, 0, p.z).normalize(); };
+    ordre.forEach((id, i) => {
+      const f = this.posFigure(id);
+      const d = dirDe(id);
+      pts.push(f.clone().add(d.clone().multiplyScalar(2.3)).setY(this.HAUT + 1.5));   // zoom avant face au Complice
+      cibles.push(f.clone().add(d.clone().multiplyScalar(-0.6)).setY(this.HAUT + 0.75));
+      arrets.push({ id, index: pts.length - 1 });
+      if (i < ordre.length - 1) {                                                       // zoom arrière entre deux quartiers
+        const m = d.clone().add(dirDe(ordre[i + 1])).normalize();
+        pts.push(m.clone().multiplyScalar(8.6).setY(6.2));
+        cibles.push(m.clone().multiplyScalar(1.2));
+      }
+    });
+    pts.push(this.VUE.pos.clone()); cibles.push(this.VUE.cible.clone());
+    const courbe = new THREE.CatmullRomCurve3(pts, false, 'centripetal');
+    const courbeCible = new THREE.CatmullRomCurve3(cibles, false, 'centripetal');
+    const n = pts.length - 1;
+
+    // calendrier (en secondes) : [instant, index du point de passage] ; deux fois le même index = pause
+    const cles = [[0, 0]];
+    let t = 0;
+    arrets.forEach((a, i) => {
+      t += i === 0 ? 2.0 : 1.05;  cles.push([t, a.index]);       // arrivée sur le Complice
+      t += 0.75;                  cles.push([t, a.index]);       // pause
+      if (i < arrets.length - 1) { t += 1.05; cles.push([t, a.index + 1]); } // passage au point haut
+    });
+    t += 2.0; cles.push([t, n]);
+    const total = t;
+    const ease = Plateau3D.ease, easeIn = (x) => x * x, easeOut = (x) => 1 - (1 - x) * (1 - x);
+    let derniereEtape = null;
+    etape('intro');
+
+    await this._cameraPrise(this.animer(total * 1000, (k) => {
+      const s = k * total;
+      let j = 0;
+      while (j < cles.length - 2 && s > cles[j + 1][0]) j++;
+      const [t0, i0] = cles[j], [t1, i1] = cles[j + 1];
+      const f = t1 > t0 ? Math.min(1, Math.max(0, (s - t0) / (t1 - t0))) : 1;
+      // vitesse continue : on ralentit seulement en arrivant sur un Complice ou à la fin
+      const versArret = arrets.some((a) => a.index === i1) || i1 === n;
+      const depuisArret = arrets.some((a) => a.index === i0) || i0 === 0;
+      const e = depuisArret && versArret ? ease(f) : versArret ? easeOut(f) : depuisArret ? easeIn(f) : f;
+      const u = (i0 + (i1 - i0) * e) / n;
+      this.camera.position.copy(courbe.getPoint(u));
+      this.controles.target.copy(courbeCible.getPoint(u));
+      const arret = arrets.find((a) => Math.abs(u * n - a.index) < 0.22);
+      const id = arret ? arret.id : (u > 0.93 ? 'fin' : null);
+      if (id && id !== derniereEtape) { derniereEtape = id; etape(id); }
+    }, true));
+    this.camera.position.copy(this.VUE.pos);
+    this.controles.target.copy(this.VUE.cible);
     this.controles.enabled = true;
   }
 
-  /** Complice sauvé ou perdu : plan sur sa zone jetons, lumière ou fumée. */
+  /** Complice sauvé ou perdu : plan sur sa figure 3D qui se transforme. */
   async cineComplice(id, statut) {
     const c = NV.COMPLICES[id];
-    const zone = this.versMonde(c.zone.u, c.zone.v);
+    const fig = this.posFigure(id, 0.7);
     this.memoriserVue();
-    await this.plan(zone, 3.4, 3.6, 1300);
+    await this.plan(fig, 2.6, 1.5, 1200);
     const lum = c._lumiere;
     if (statut === 'sauve') {
-      this.particules(zone.clone().setY(this.HAUT + 0.2), [c.couleur, '#ffffff', c.couleurClaire], 'eclat', 2400);
+      this.particules(fig.clone().setY(this.HAUT + 0.3), [c.couleur, '#ffffff', c.couleurClaire], 'eclat', 2400);
       const i0 = lum.intensity;
       this.animer(1600, (t) => { lum.intensity = i0 + Math.sin(t * Math.PI) * 30; }, true);
     } else {
-      this.particules(zone.clone().setY(this.HAUT + 0.1), ['#1a0a10', '#3a0b18', '#55101f'], 'fumee', 2600);
+      this.particules(fig.clone().setY(this.HAUT + 0.1), ['#1a0a10', '#3a0b18', '#55101f'], 'fumee', 2600);
       const i0 = lum.intensity;
       this.animer(1600, (t) => { lum.intensity = i0 * (Math.random() > 0.3 ? 1 - t * 0.8 : 0.1); lum.color.set(t > 0.5 ? '#ff2a3a' : c.couleur); }, true);
     }
-    await this.attendre(1700);
+    await this.attendre(1800);
   }
 
   /** Attaque du Dark Master : plan sur la pioche Attaque, lumière rouge. */
@@ -706,14 +934,15 @@ class Plateau3D {
     await this.attendre(350);
   }
 
-  /** Face-à-face : rapproché sur le pion du joueur. */
+  /** Face-à-face : le pion du joueur et la figure du Complice dans le même cadre. */
   async cineFaceAFace(joueur, id) {
     const pion = this.pions[joueur.id];
     this.memoriserVue();
     const c = NV.COMPLICES[id];
     const lum = c._lumiere, i0 = lum.intensity;
     this.animer(1600, (t) => { lum.intensity = i0 + Math.sin(t * Math.PI) * 10; }, true);
-    await this.plan(pion.position.clone().setY(this.HAUT + 0.5), 2.4, 2.2, 1100);
+    const milieu = pion.position.clone().lerp(this.posFigure(id, 0.6), 0.5).setY(this.HAUT + 0.55);
+    await this.plan(milieu, 2.5, 1.7, 1100);
     await this.attendre(700);
   }
 
@@ -734,14 +963,15 @@ class Plateau3D {
     const r = 15, h = 11;
     const a0 = Math.atan2(this.camera.position.x, this.camera.position.z);
     const p0 = this.camera.position.clone(), t0 = this.controles.target.clone();
-    await this.animer(5200, (t) => {
+    this._idVue++;
+    await this._cameraPrise(this.animer(5200, (t) => {
       const k = Plateau3D.ease(t);
       const ang = a0 + k * (victoire ? Math.PI * 2 : 0.6);
       const cible = new THREE.Vector3(Math.sin(ang) * r, h, Math.cos(ang) * r);
       this.camera.position.lerpVectors(p0, cible, Math.min(1, t * 2.5));
       if (t > 0.4) this.camera.position.copy(cible);
       this.controles.target.lerpVectors(t0, new THREE.Vector3(0, 0, 0), Math.min(1, t * 2));
-    }, true);
+    }, true));
     this.controles.enabled = true;
   }
 
@@ -784,7 +1014,17 @@ class Plateau3D {
     }
     for (const a of this.anneauxDest) if (a.visible) a.material.opacity = 0.55 + 0.4 * Math.sin(temps * 6);
     for (const z of Object.values(this.jetons)) if (z.badge) z.badge.position.y = 0.95 + Math.sin(temps * 2) * 0.05;
-    this.controles.update();
+    this._animerFigures(temps);
+    // Pendant une animation de caméra, les contrôles ne doivent pas la contrarier (inertie résiduelle).
+    // À la fin, on vide leur inertie pour que la vue reste exactement où l'animation l'a posée.
+    if (this._occupee > 0) { this._etaitOccupee = true; }
+    else {
+      if (this._etaitOccupee) {
+        this._etaitOccupee = false;
+        this.controles.enableDamping = false; this.controles.update(); this.controles.enableDamping = true;
+      }
+      this.controles.update();
+    }
     this.renderer.render(this.scene, this.camera);
   }
 }

@@ -83,12 +83,17 @@ class Jeu {
   async cine(sequence, titre, texte, couleur) {
     if (!this.plateau.cinematiques) return false;
     this.ui.cinemaDebut(titre, texte, couleur);
-    try { await sequence(); } finally { this.ui.cinemaFin(); }
+    this.plateau.enCinematique = true;
+    try { await sequence(); } finally { this.plateau.enCinematique = false; this.ui.cinemaFin(); }
     return true;
   }
-  /** Ramène la caméra à la vue de jeu après une cinématique. */
+  /** Après une cinématique, la caméra revient toujours sur le joueur actif (ou la vue d'ensemble). */
   async retourVue() {
-    if (this.plateau._vue) await this.plateau.revenirVue(900);
+    const p = this.plateau;
+    p._vue = null;
+    p.controles.enabled = true;
+    if (this.joueurActif) await p.vueJoueur(this.joueurActif, 900);
+    else await p.revenirVue(900);
   }
 
   /* ===================== jetons ===================== */
@@ -208,8 +213,14 @@ class Jeu {
 
     this.son('intro');
     if (window.NV_AUDIO) NV_AUDIO.demarrerMusique();
-    await this.cine(() => this.plateau.cineIntro(), 'Numéville',
-      'Le Dark Master et ses 4 Complices ont pris le contrôle de la ville. Éclaireurs, à vous de jouer !', '#38e1ff');
+    // Ouverture : tour du plateau, la légende présente chaque Complice au passage de la caméra
+    const legendes = {
+      intro: ['Numéville', 'Le Dark Master et ses 4 Complices ont pris le contrôle de la ville.', '#38e1ff'],
+      fin: ['À vous de jouer !', 'Éclaireurs, répondez aux questions pour ramener les Complices à la raison.', '#38e1ff'],
+    };
+    for (const id of NV.ORDRE_COMPLICES) legendes[id] = [NV.COMPLICES[id].nom, NV.COMPLICES[id].theme + '.', NV.COMPLICES[id].couleur];
+    await this.cine(() => this.plateau.cineIntro((etape) => { const l = legendes[etape]; if (l) this.ui.cinemaMaj(...l); }),
+      ...legendes.intro);
 
     await this.choisirPremierJoueur();
 
@@ -287,9 +298,10 @@ class Jeu {
       this.plateau.cacherDestinations();
       const chemin = ch[dir];
       if (chemin.length > n) this.ui.log('La case d’arrivée était occupée : le pion avance jusqu’à la prochaine case libre.');
+      // la caméra accompagne le pion vers sa case d'arrivée pendant le déplacement
+      this.plateau.vueJoueur(j, Math.max(900, chemin.length * 260), this.plateau.posCase(chemin[chemin.length - 1]));
       await this.plateau.deplacerPion(j, chemin);
       j.case = chemin[chemin.length - 1];
-      this.plateau.vueJoueur(j, 900);
       this.ui.log(`🚶 ${this.tagJ(j)} avance de ${n} (${dir === 1 ? 'horaire' : 'anti-horaire'}) et arrive sur ${this.descCase(j.case)}.`);
     }
 

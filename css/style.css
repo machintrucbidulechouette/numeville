@@ -422,3 +422,5 @@ body:not(.en-jeu) #panneau-audio { top: calc(16px + env(safe-area-inset-top, 0px
 .pa-pistes label:hover span { background: #121a3d; border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
 .pa-pistes input:checked + span { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, #0a0f26); }
 .pa-pistes input:focus-visible + span { outline: 3px solid #fff; outline-offset: 2px; }
+#cinema .legende.change { animation: legende-change .6s ease-out; }
+@keyframes legende-change { from { opacity: 0; transform: translateY(10px); } }

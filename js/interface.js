@@ -125,6 +125,14 @@ class Interface {
     document.body.classList.add('cinema');
   }
   cinemaFin() { document.body.classList.remove('cinema'); }
+  /** Change la légende pendant une cinématique (petit fondu). */
+  cinemaMaj(titre, texte, couleur) {
+    const c = $('#cinema'), l = $('.legende', c);
+    l.classList.remove('change'); void l.offsetWidth; l.classList.add('change');
+    $('h2', c).textContent = titre;
+    $('p', c).textContent = texte || '';
+    if (couleur) c.style.setProperty('--c', couleur);
+  }
 
   /* ---------------- barre d'action (bas de l'écran) ---------------- */
   action(texte, boutons) {
