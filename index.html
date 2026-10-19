@@ -8,7 +8,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Lexend:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/cartes.css">
+  <link rel="stylesheet" href="css/accueil.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/son.css">
+  <link rel="stylesheet" href="css/avance.css">
+  <link rel="stylesheet" href="css/adaptatif.css">
 
   <!-- Three.js r184 (dernière version stable, avril 2026), module ES chargé depuis un CDN
        puis exposé en global pour les scripts du jeu. WebGL 2 requis (WebGL 1 n'est plus supporté depuis r163). -->
@@ -59,6 +65,9 @@
     <div class="defile"><ol id="journal-liste"></ol></div>
   </aside>
 
+  <!-- Main du joueur actif (mode avancé) -->
+  <div id="main-joueur" hidden></div>
+
   <!-- Barre d'actions -->
   <footer id="actions" aria-live="polite"></footer>
 
@@ -92,6 +101,15 @@
           <button data-niveau="expert">Expert<small></small></button>
         </div>
         <p id="seuils"></p>
+      </div>
+
+      <div class="reglage">
+        <h2>Mode de jeu</h2>
+        <label class="interrupteur" for="mode-avance">
+          <input type="checkbox" id="mode-avance">
+          <span class="glissiere" aria-hidden="true"></span>
+          <span class="interrupteur-texte"><b>Mode avancé</b> : cartes Objet et Pouvoir sur deux cases du plateau.<small>Se joue en niveau Standard ou Expert.</small></span>
+        </label>
       </div>
 
       <div class="accueil-actions">
@@ -138,15 +156,27 @@
 
   <!-- Données du jeu -->
   <script src="js/data/regles.js"></script>
+  <script src="js/data/cartes-avancees.js"></script>
   <script src="js/data/questions.js"></script>
   <script src="js/data/textures.js"></script>
   <script src="js/data/board-texture.js"></script>
-  <!-- Code du jeu -->
-  <script src="js/audio.js"></script>
-  <script src="js/plateau3d.js"></script>
-  <script src="js/jeu.js"></script>
-  <script src="js/interface.js"></script>
-  <script src="js/main.js"></script>
+  <!-- Outils communs -->
+  <script src="js/outils.js"></script>
+  <!-- Audio : moteur + effets, puis musique -->
+  <script src="js/audio/audio.js"></script>
+  <script src="js/audio/musique.js"></script>
+  <!-- Scène 3D : cœur, puis Complices, effets visuels et caméra -->
+  <script src="js/3d/plateau3d.js"></script>
+  <script src="js/3d/complices3d.js"></script>
+  <script src="js/3d/effets3d.js"></script>
+  <script src="js/3d/cinematiques.js"></script>
+  <!-- Règles : cœur, cartes Dark Master, mode avancé -->
+  <script src="js/jeu/jeu.js"></script>
+  <script src="js/jeu/cartes-dark-master.js"></script>
+  <script src="js/jeu/mode-avance.js"></script>
+  <!-- Interface et démarrage -->
+  <script src="js/ui/interface.js"></script>
+  <script src="js/ui/main.js"></script>
 
   <script type="module">
     import * as THREE from 'three';

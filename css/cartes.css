@@ -1,0 +1,120 @@
+/* =====================================================================
+   Numéville 3D — fenêtres et cartes (question, Dark Master, choix, révélation, fin, aide)
+   ===================================================================== */
+
+/* ---------------- modales ---------------- */
+#modale, #aide {
+  position: fixed; inset: 0; z-index: 20; display: none; place-items: center; padding: 20px;
+  background: rgba(4, 6, 16, .55); backdrop-filter: blur(3px);
+}
+#aide { z-index: 40; }
+#modale.ouverte, #aide.ouverte { display: grid; animation: fondu .25s; }
+@keyframes fondu { from { opacity: 0; } }
+.boite {
+  width: min(520px, 100%); max-height: calc(100vh - 40px); overflow-y: auto;
+  background: var(--panneau-plein); border: 1px solid var(--bord); border-radius: 18px; padding: 22px;
+  box-shadow: 0 30px 80px rgba(0,0,0,.6); animation: monte .35s cubic-bezier(.2,.9,.3,1.2);
+}
+.boite.large { width: min(720px, 100%); }
+.boite.petite { width: min(440px, 100%); }
+@keyframes monte { from { transform: translateY(30px) scale(.96); opacity: 0; } }
+.boite h2 { margin: 0 0 8px; font-family: var(--titre); font-size: 24px; line-height: 1.15; }
+.boite p { color: #d7dcf3; line-height: 1.5; }
+.choix { display: grid; gap: 10px; margin-top: 14px; }
+.choix .btn { text-align: left; border-radius: 12px; padding: 12px 16px; }
+.choix .btn.principal { text-align: left; }
+/* cartes à largeur fixe (centrées) : une seule carte ne s'étire plus sur toute la fenêtre */
+.choix-complices { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 14px; }
+.choix-complices .carte-complice { flex: 0 1 112px; min-width: 92px; max-width: 112px; }
+.carte-complice { color: var(--texte); border: 2px solid var(--c); background: #0b1028; border-radius: 12px; padding: 8px; display: grid; gap: 4px; justify-items: center; transition: transform .15s, box-shadow .15s; }
+.carte-complice img { width: 100%; aspect-ratio: 337/520; object-fit: cover; border-radius: 8px; }
+.carte-complice b { font-family: var(--titre); font-size: 18px; color: var(--c); filter: brightness(1.3); }
+.carte-complice small { color: var(--doux); }
+.carte-complice:hover, .carte-complice:focus-visible { background: #121a3d; transform: translateY(-4px); box-shadow: 0 10px 26px color-mix(in srgb, var(--c) 40%, transparent); }
+
+/* carte question : reprend la charte des cartes Numéville (bandeau coloré, texte noir) */
+.boite.large:has(.carte-question) { padding: 0; background: transparent; border: none; box-shadow: none; overflow: visible; }
+.carte-question { --cf: color-mix(in srgb, var(--c) 72%, #000); background: #fff; color: #15172a; border-radius: 18px; overflow: hidden; border: 4px solid var(--c); box-shadow: 0 30px 80px rgba(0,0,0,.6), 0 0 40px color-mix(in srgb, var(--c) 40%, transparent); max-height: calc(100vh - 40px); overflow-y: auto; }
+.carte-question header { background: var(--cf); padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; gap: 10px; position: sticky; top: 0; z-index: 1; }
+.cq-nom { font-family: var(--titre); font-weight: 800; font-size: 30px; color: #fff; letter-spacing: 1px; text-transform: lowercase; }
+.cq-joueur { display: flex; align-items: center; gap: 8px; color: #fff; font-weight: 600; background: rgba(0,0,0,.25); padding: 4px 12px 4px 4px; border-radius: 999px; }
+.cq-joueur img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; object-position: 50% 8%; border: 2px solid var(--j); }
+.cq-corps { padding: 18px 22px 22px; }
+.cq-num { font-family: var(--titre); font-weight: 800; font-size: 34px; line-height: 1; color: var(--cf); }
+.cq-badges { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 10px; }
+.badge { font-size: 11.5px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: #eef0f8; color: #3b3f5c; }
+.badge.fort { background: var(--cf); color: #fff; }
+.cq-q { font-family: var(--corps) !important; font-weight: 600; font-size: 21px !important; color: #15172a; margin-bottom: 16px !important; }
+.cq-options { display: grid; gap: 10px; }
+.cq-options .option { display: flex; align-items: center; gap: 12px; text-align: left; padding: 12px 14px; border-radius: 12px; border: 2px solid #e3e6f2; background: #f7f8fc; color: #15172a; font-size: 15.5px; line-height: 1.35; transition: .15s; }
+.cq-options .option:hover:not([disabled]), .cq-options .option:focus-visible { color: #15172a; border-color: var(--cf); background: color-mix(in srgb, var(--c) 8%, #fff); transform: translateX(3px); }
+.lettre { flex: none; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-family: var(--titre); font-weight: 800; font-size: 18px; background: var(--cf); color: #fff; }
+.option.juste { border-color: #1fa45a !important; background: #e5f8ec !important; }
+.option.juste .lettre { background: #1fa45a; }
+.option.faux { border-color: var(--rouge) !important; background: #ffe9ea !important; }
+.option.faux .lettre { background: var(--rouge); }
+.option[disabled] { cursor: default; }
+.option[disabled]:not(.juste):not(.faux) { opacity: .55; }
+.cq-retour:empty { display: none; }
+.cq-retour { margin-top: 16px; display: grid; gap: 12px; }
+.verdict { font-family: var(--titre); font-weight: 700; font-size: 20px; padding: 10px 14px; border-radius: 12px; }
+.verdict small { display: block; font-family: var(--corps); font-weight: 500; font-size: 13px; opacity: .8; }
+.verdict.ok { background: #e5f8ec; color: #0f6b38; }
+.verdict.ko { background: #ffe9ea; color: #a3141c; }
+.explication { background: #f4f5fb; border-radius: 12px; padding: 10px 14px; }
+.explication summary { cursor: pointer; font-weight: 600; color: var(--cf); }
+.explication p { color: #2a2d45 !important; font-size: 14px; margin: 8px 0 0; }
+.sources { margin: 8px 0 0; padding-left: 18px; font-size: 12px; color: #5b5f7a; }
+.cq-retour .btn.principal { justify-self: end; }
+.carte-question.reussie { animation: secoue-ok .5s; }
+.carte-question.ratee { animation: secoue-ko .4s; }
+@keyframes secoue-ok { 50% { transform: scale(1.015); } }
+@keyframes secoue-ko { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+
+/* carte Dark Master (retournement) */
+.boite.dm { width: min(360px, 100%); padding: 0; background: transparent; border: none; box-shadow: none; overflow: visible; perspective: 1200px; }
+.carte-dm { position: relative; width: 100%; aspect-ratio: 337/520; transform-style: preserve-3d; transition: transform .7s cubic-bezier(.3,.8,.3,1); }
+.carte-dm.retournee { transform: rotateY(180deg); }
+.dm-dos, .dm-face { position: absolute; inset: 0; backface-visibility: hidden; border-radius: 16px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,.7); }
+.dm-dos img { width: 100%; height: 100%; object-fit: cover; }
+.dm-face { transform: rotateY(180deg); background: #fff; color: #15172a; display: flex; flex-direction: column; border: 3px solid #111; }
+.dm-face header { background: #0b0b10; color: #fff; text-align: center; font-family: var(--titre); font-weight: 800; font-size: 30px; padding: 26px 10px 18px; text-transform: lowercase; letter-spacing: 1px; position: relative; }
+.dm-illu { flex: 1; min-height: 0; background-size: cover; background-position: 50% 18%; margin: 14px 20px 0; border-radius: 12px; opacity: .9; }
+.carte-dm.attaque .dm-face header { background: linear-gradient(#0b0b10, #3a0712); }
+.dm-face .btn { margin-top: 14px !important; }
+.carte-dm.fin .dm-face header { background: linear-gradient(#0b0b10, #3a3307); }
+.dm-face h2 { color: #15172a; padding: 18px 20px 0; font-size: 23px; }
+.dm-face p { color: #2a2d45 !important; padding: 0 20px; margin: 6px 0; font-size: 15px; }
+.dm-face p.note { color: #a3141c !important; font-weight: 600; }
+.dm-face .btn { margin: auto 20px 20px; }
+
+/* révélation Complice sauvé / perdu */
+.revelation { text-align: center; }
+.revelation img { width: 100%; border-radius: 14px; border: 3px solid var(--c); box-shadow: 0 0 40px color-mix(in srgb, var(--c) 60%, transparent); }
+.revelation h2 { margin-top: 16px !important; font-size: 30px !important; color: var(--c); filter: brightness(1.35); }
+.revelation.perdu img { filter: grayscale(1) contrast(1.2) brightness(.6); border-color: var(--rouge); box-shadow: 0 0 40px rgba(255,58,68,.5); }
+.revelation.perdu h2 { color: var(--rouge); filter: none; }
+
+/* fin de partie */
+.fin-partie { text-align: center; }
+.fin-partie h1 { font-family: var(--titre); font-size: 44px; margin: 0; }
+.fin-partie.totale h1, .fin-partie.victoire h1 { background: linear-gradient(90deg, var(--stalky), var(--hacker), var(--hyperco), var(--datata)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.fin-partie.defaite h1 { color: var(--rouge); }
+.bilan { font-family: var(--titre); font-size: 18px; color: #fff !important; }
+.fiches-fin { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 14px 0; }
+.fiches-fin img { width: 100%; border-radius: 8px; aspect-ratio: 1.44; object-fit: cover; object-position: 0 0; }
+.fiches-fin .perdu img { filter: grayscale(1) brightness(.6); }
+.fiches-fin .actif img { opacity: .6; }
+.fiches-fin figure { margin: 0; }
+.fiches-fin figcaption { font-size: 12px; color: var(--doux); margin-top: 4px; }
+.stats { list-style: none; padding: 0; display: grid; gap: 6px; margin: 0 0 16px; }
+.stats li { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 10px; background: rgba(255,255,255,.04); border-left: 3px solid var(--c); text-align: left; }
+.stats img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; object-position: 50% 8%; }
+.stats span { margin-left: auto; color: var(--doux); font-size: 13px; }
+
+/* aide de jeu */
+.regles .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
+.regles h3 { font-family: var(--titre); font-size: 17px; margin: 6px 0; color: var(--accent); }
+.regles ol, .regles ul { padding-left: 18px; margin: 0; font-size: 13.5px; line-height: 1.5; color: #d7dcf3; }
+.regles li { margin-bottom: 5px; }
+.credits { font-size: 12px !important; color: var(--doux) !important; }

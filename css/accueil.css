@@ -1,0 +1,43 @@
+/* =====================================================================
+   Numéville 3D — écran d'accueil
+   ===================================================================== */
+
+/* ---------------- accueil ---------------- */
+#accueil {
+  position: fixed; inset: 0; z-index: 10; overflow-y: auto; padding: 30px 16px;
+  display: grid; place-items: center;
+  background: radial-gradient(ellipse at 50% 30%, rgba(7,10,22,.35), rgba(7,10,22,.85) 70%);
+  transition: opacity .5s;
+}
+#accueil.cache { opacity: 0; pointer-events: none; }
+.accueil-boite { width: min(760px, 100%); background: rgba(12, 17, 38, .9); border: 1px solid var(--bord); border-radius: 22px; padding: 28px 30px; backdrop-filter: blur(12px); box-shadow: 0 40px 100px rgba(0,0,0,.6); }
+.accueil-titre { text-align: center; }
+.accueil-titre h1 { margin: 0; font-family: var(--titre); font-weight: 800; font-size: clamp(48px, 9vw, 78px); line-height: .9; letter-spacing: 1px;
+  background: linear-gradient(90deg, var(--stalky), var(--hacker) 38%, var(--hyperco) 66%, var(--datata)); -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 4px 20px rgba(56,225,255,.25)); }
+.accueil-titre p { margin: 6px 0 0; color: var(--doux); letter-spacing: 2px; text-transform: uppercase; font-size: 12px; }
+.pitch { text-align: center; color: #d7dcf3; line-height: 1.55; max-width: 600px; margin: 18px auto 6px; }
+.pitch .rouge { color: #ff6a72; } .pitch .bleu { color: #6f9bff; }
+.reglage { margin-top: 18px; }
+.reglage h2 { font-family: var(--titre); font-size: 17px; margin: 0 0 8px; color: var(--accent); letter-spacing: .5px; }
+.segment { display: inline-flex; background: #0a0f26; border: 1px solid var(--bord); border-radius: 999px; padding: 4px; gap: 4px; }
+.segment button { border: 0; background: transparent; padding: 8px 20px; border-radius: 999px; font-weight: 600; color: var(--doux); }
+.segment button:hover:not(.choisi) { background: rgba(255,255,255,.09); color: #ffffff; }
+.segment button.choisi { background: linear-gradient(135deg, #5ce7ff, #a99bff); color: #050816; }
+.segment.niveaux button { display: grid; line-height: 1.15; }
+.segment.niveaux small { font-size: 11px; font-weight: 500; opacity: .85; }
+#seuils { margin: 8px 0 0; color: var(--doux); font-size: 13.5px; }
+#liste-joueurs { display: grid; gap: 10px; }
+.ligne-joueur { display: grid; grid-template-columns: 30px minmax(120px, 190px) 1fr; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 14px; background: #0a0f26; border: 1px solid color-mix(in srgb, var(--c) 40%, transparent); }
+.ligne-joueur .num { font-family: var(--titre); font-weight: 800; font-size: 20px; color: var(--c); text-align: center; }
+.ligne-joueur input { background: #121a3d; border: 1px solid var(--bord); border-radius: 10px; color: var(--texte); padding: 9px 12px; font: inherit; width: 100%; }
+.ligne-joueur input:focus { outline: 2px solid var(--c); }
+.eclaireurs { display: flex; gap: 6px; flex-wrap: wrap; }
+.ecl { --c: #888; display: flex; align-items: center; gap: 6px; padding: 3px 10px 3px 3px; border-radius: 999px; border: 2px solid transparent; background: #121a3d; font-size: 13px; font-weight: 600; color: var(--doux); }
+.ecl img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; object-position: 50% 8%; }
+.ecl:hover:not([disabled]):not(.choisi) { color: #ffffff; background: color-mix(in srgb, var(--c) 14%, #121a3d); border-color: color-mix(in srgb, var(--c) 50%, transparent); }
+.ecl.choisi { border-color: var(--c); color: #fff; background: color-mix(in srgb, var(--c) 22%, #121a3d); }
+.ecl[disabled] { opacity: .3; cursor: not-allowed; }
+.accueil-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+.accueil-actions .principal { font-size: 17px; padding: 12px 28px; }
+.accueil-boite .credits { text-align: center; margin: 16px 0 0; }

@@ -55,23 +55,55 @@ Si besoin, on peut aussi servir le dossier : `python3 -m http.server` puis http:
 - Les animations sont réduites si le système le demande (« réduire les animations »).
 - Contrastes des boutons vérifiés au repos, au survol et au focus (WCAG AA).
 
-Non inclus pour l'instant : le **mode avancé** (cartes Objet / Pouvoir) et le **mode Atelier**.
+### Mode avancé (cartes Objet et Pouvoir, règles p. 11-12)
+
+À activer sur l'écran d'accueil (niveau Standard ou Expert uniquement).
+- En début de partie, les joueurs choisissent une **case Objet** 🧰 et une **case Pouvoir** ⚡ (ou au hasard) ; elles sont signalées sur le plateau 3D.
+- Terminer son déplacement sur l'une d'elles fait piocher une carte, puis on joue son tour normalement.
+- **13 Objets** (usage unique) et **13 Pouvoirs** (permanents ou à quelques utilisations), avec leurs textes d'origine.
+- Maximum 1 Objet et 1 Pouvoir en main : en piocher un autre oblige à choisir lequel garder.
+- Une carte qui concerne un Complice déjà sauvé ou perdu est remplacée.
+- Le jeu propose chaque carte **au bon moment** (avant le dé blanc, après un dé, avant ou après une question, à une attaque,
+  en fin de tour, en fin de manche…). Les cartes du joueur actif s'affichent en bas de l'écran : un clic permet de relire leur texte.
+
+Non inclus pour l'instant : le **mode Atelier** (animation de groupe en classe).
 
 ## Organisation du code
 
 ```
-index.html            page, chargement de Three.js (importmap) et des scripts
-css/style.css         interface (HUD, fiches Complices, cartes, modales)
-js/data/regles.js     données : plateau, Complices, Éclaireurs, seuils, cartes Dark Master
-js/data/questions.js  les 200 questions + explications du livret maître du jeu
-js/data/textures.js   images des pions et des pioches (data URI, pour WebGL sans serveur)
-js/data/board-texture.js  texture du plateau
-js/audio.js           musique générative, effets sonores et réglages (Web Audio API)
-js/plateau3d.js       scène Three.js : plateau, pions, dés 3D, jetons, pioches, animations, sons
-js/jeu.js             moteur de règles (déroulé des manches, tours, effets des cartes)
-js/interface.js       interface HTML : actions, questions, cartes, choix, fin de partie
-js/main.js            écran d'accueil et démarrage
-assets/img/           visuels extraits du Print & Play (fiches, cartes, Éclaireurs)
+index.html                 page, chargement de Three.js r184 (importmap) puis des scripts dans l'ordre
+css/
+  base.css                 couleurs, boutons, barre du haut, fiches Complices, journal, barre d'actions
+  cartes.css               fenêtres : question, cartes Dark Master, choix, révélation, fin, aide
+  accueil.css              écran d'accueil
+  animations.css           animations légères et bandes des cinématiques
+  son.css                  panneau des réglages du son
+  avance.css               mode avancé : interrupteur, cartes en main, minute de concertation
+  adaptatif.css            petits écrans et « réduire les animations » (chargé en dernier)
+js/
+  outils.js                NV_etendre : découpe une classe en plusieurs fichiers thématiques
+  data/
+    regles.js              plateau, Complices, Éclaireurs, seuils, cartes Dark Master
+    cartes-avancees.js     les 13 Objets et 13 Pouvoirs
+    questions.js           les 200 questions + explications du livret maître du jeu
+    textures.js            images pour WebGL (pions, pioches, bustes des Complices, icônes)
+    board-texture.js       texture du plateau
+  audio/
+    audio.js               moteur audio, réglages, effets sonores
+    musique.js             musique générative (2 morceaux, 4 ambiances)
+  3d/
+    plateau3d.js           scène Three.js : plateau, pions, dés, jetons, pioches, cases Objet/Pouvoir, boucle de rendu
+    complices3d.js         les 4 Complices en 3D
+    effets3d.js            étiquettes et particules
+    cinematiques.js        caméra (recentrage fiable) et cinématiques
+  jeu/
+    jeu.js                 moteur de règles : manches, tour de jeu en étapes, jetons, questions
+    cartes-dark-master.js  cartes Fin de manche et Attaque
+    mode-avance.js         cartes Objet et Pouvoir
+  ui/
+    interface.js           interface HTML : actions, questions, cartes, choix, main du joueur, fin de partie
+    main.js                écran d'accueil, réglages du son, démarrage
+assets/img/                visuels extraits du Print & Play (fiches, cartes, Éclaireurs)
 ```
 
 ## Crédits

@@ -1,0 +1,49 @@
+/* =====================================================================
+   Numéville 3D — mode avancé (cartes Objet et Pouvoir)
+   ===================================================================== */
+
+/* interrupteur de l'écran d'accueil */
+.interrupteur { display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 10px 12px; border-radius: 14px; background: #0a0f26; border: 1px solid var(--bord); }
+.interrupteur input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.glissiere { flex: none; width: 46px; height: 26px; border-radius: 999px; background: #1d2650; position: relative; transition: background-color .2s; }
+.glissiere::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #c8d0f0; transition: transform .2s; }
+.interrupteur input:checked + .glissiere { background: linear-gradient(135deg, #5ce7ff, #a99bff); }
+.interrupteur input:checked + .glissiere::after { transform: translateX(20px); background: #050816; }
+.interrupteur input:focus-visible + .glissiere { outline: 3px solid #fff; outline-offset: 2px; }
+.interrupteur-texte { color: var(--texte); font-size: 14px; line-height: 1.4; }
+.interrupteur-texte small { display: block; color: var(--doux); font-size: 12px; }
+.segment button[disabled] { opacity: .35; cursor: not-allowed; }
+
+/* cartes en main du joueur actif (au-dessus de la barre d'actions) */
+#main-joueur {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: 112px; z-index: 6;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px;
+  max-width: min(640px, calc(100% - 32px));
+}
+#main-joueur[hidden] { display: none; }
+.main-titre { font-size: 12px; color: var(--doux); text-transform: uppercase; letter-spacing: 1px; padding: 4px 10px; border-radius: 999px; background: var(--panneau); border: 1px solid var(--bord); }
+.puce-carte { border-radius: 999px; padding: 6px 14px; font-size: 13.5px; font-weight: 600; color: var(--texte); background: var(--panneau-plein); border: 1px solid; box-shadow: 0 6px 18px rgba(0,0,0,.4); }
+.puce-carte small { font-weight: 500; color: var(--doux); margin-left: 4px; }
+.puce-carte.objet { border-color: #38e1ff; }
+.puce-carte.pouvoir { border-color: #b98cff; }
+.puce-carte:hover, .puce-carte:focus-visible { background: #18214a; color: #ffffff; }
+body.cinema #main-joueur { opacity: 0; pointer-events: none; }
+.mini i.cartes { right: auto; left: -6px; }
+
+/* cartes Objet et Pouvoir (même gabarit que les cartes Dark Master) */
+.carte-dm.objet .dm-face header { background: linear-gradient(#0b0b10, #06364a); }
+.carte-dm.pouvoir .dm-face header { background: linear-gradient(#0b0b10, #2c1458); }
+/* nombre d'utilisations : violet foncé sur la carte blanche, violet clair sur fond sombre */
+.boite .usage { color: #c9bcff !important; font-weight: 600; font-size: 13px !important; }
+.boite .dm-face .usage { color: #4b3b8f !important; }
+.carte-rappel { display: block; font-size: 13px; color: var(--doux); border-left: 3px solid var(--accent); padding: 4px 0 4px 10px; margin: 4px 0 10px; }
+
+/* Carnet d'indices : minute de concertation */
+.concertation { position: relative; overflow: hidden; margin: 0 0 12px; padding: 8px 12px; border-radius: 10px; background: #eef7ff; color: #0b3b5a; font-weight: 600; font-size: 14px; }
+.concertation span { position: relative; z-index: 1; }
+.concertation i { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; background: rgba(56, 225, 255, .25); transition: width .25s linear; }
+.concertation.fini { background: #fff3e0; color: #7a4a00; }
+
+@media (max-width: 760px) {
+  #main-joueur { bottom: 196px; }
+}
