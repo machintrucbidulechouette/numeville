@@ -266,6 +266,7 @@ class Jeu {
     this.joueurActif = j;
     this.ui.majHUD(this);
     this.plateau.montrerJoueurActif(j);
+    this.plateau.vueJoueur(j);
     const piege = j.piegeClics; j.piegeClics = false;
     const bloque = j.notification; j.notification = false;
 
@@ -288,6 +289,7 @@ class Jeu {
       if (chemin.length > n) this.ui.log('La case d’arrivée était occupée : le pion avance jusqu’à la prochaine case libre.');
       await this.plateau.deplacerPion(j, chemin);
       j.case = chemin[chemin.length - 1];
+      this.plateau.vueJoueur(j, 900);
       this.ui.log(`🚶 ${this.tagJ(j)} avance de ${n} (${dir === 1 ? 'horaire' : 'anti-horaire'}) et arrive sur ${this.descCase(j.case)}.`);
     }
 

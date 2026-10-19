@@ -176,12 +176,14 @@ body.en-jeu #actions { display: block; }
 .choix { display: grid; gap: 10px; margin-top: 14px; }
 .choix .btn { text-align: left; border-radius: 12px; padding: 12px 16px; }
 .choix .btn.principal { text-align: left; }
-.choix-complices { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 12px; margin-top: 14px; }
-.carte-complice { border: 2px solid var(--c); background: #0b1028; border-radius: 12px; padding: 8px; display: grid; gap: 4px; justify-items: center; transition: transform .15s, box-shadow .15s; }
+/* cartes à largeur fixe (centrées) : une seule carte ne s'étire plus sur toute la fenêtre */
+.choix-complices { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 14px; }
+.choix-complices .carte-complice { flex: 0 1 112px; min-width: 92px; max-width: 112px; }
+.carte-complice { color: var(--texte); border: 2px solid var(--c); background: #0b1028; border-radius: 12px; padding: 8px; display: grid; gap: 4px; justify-items: center; transition: transform .15s, box-shadow .15s; }
 .carte-complice img { width: 100%; aspect-ratio: 337/520; object-fit: cover; border-radius: 8px; }
 .carte-complice b { font-family: var(--titre); font-size: 18px; color: var(--c); filter: brightness(1.3); }
 .carte-complice small { color: var(--doux); }
-.carte-complice:hover { transform: translateY(-4px); box-shadow: 0 10px 26px color-mix(in srgb, var(--c) 40%, transparent); }
+.carte-complice:hover, .carte-complice:focus-visible { background: #121a3d; transform: translateY(-4px); box-shadow: 0 10px 26px color-mix(in srgb, var(--c) 40%, transparent); }
 
 /* carte question : reprend la charte des cartes Numéville (bandeau coloré, texte noir) */
 .boite.large:has(.carte-question) { padding: 0; background: transparent; border: none; box-shadow: none; overflow: visible; }
@@ -410,3 +412,13 @@ body.cinema #hud, body.cinema #fiches, body.cinema #journal, body.cinema #action
 .pa-muet kbd { margin-left: auto; font-family: var(--corps); font-size: 11px; padding: 2px 6px; border-radius: 5px; border: 1px solid var(--bord); color: var(--doux); }
 .pa-note { margin: 8px 0 0; font-size: 11.5px; color: var(--doux); line-height: 1.4; }
 body:not(.en-jeu) #panneau-audio { top: calc(16px + env(safe-area-inset-top, 0px)); }
+.pa-pistes { border: 0; margin: 8px 0 2px; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pa-pistes legend { font-size: 13.5px; color: var(--texte); margin-bottom: 6px; padding: 0; }
+.pa-pistes label { position: relative; cursor: pointer; }
+.pa-pistes input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.pa-pistes span { display: grid; gap: 2px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--bord); background: #0a0f26; color: var(--texte); transition: background-color .2s, border-color .2s; }
+.pa-pistes b { font-family: var(--titre); font-size: 15px; }
+.pa-pistes small { font-size: 11px; color: var(--doux); }
+.pa-pistes label:hover span { background: #121a3d; border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+.pa-pistes input:checked + span { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, #0a0f26); }
+.pa-pistes input:focus-visible + span { outline: 3px solid #fff; outline-offset: 2px; }

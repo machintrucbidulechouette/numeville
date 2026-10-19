@@ -80,6 +80,16 @@
         majIcone();
       });
     }
+    // choix du morceau
+    document.querySelectorAll('input[name="piste"]').forEach((r) => {
+      r.checked = r.value === (A.reglages.piste || 'neons');
+      r.addEventListener('change', () => {
+        if (!r.checked) return;
+        A.deverrouiller();
+        A.demarrerMusique();
+        A.choisirPiste(r.value);
+      });
+    });
     const muet = document.querySelector('#son-muet');
     muet.checked = A.reglages.muet;
     muet.addEventListener('change', () => { A.regler('muet', muet.checked); majIcone(); });
@@ -145,12 +155,17 @@
 
     document.querySelector('#btn-regles').addEventListener('click', () => ui.regles());
     document.querySelector('#btn-regles-accueil').addEventListener('click', () => ui.regles());
-    document.querySelector('#btn-vue').addEventListener('click', () => plateau.vueDefaut());
+    document.querySelector('#btn-vue').addEventListener('click', () => {
+      // recentre sur le joueur actif pendant la partie, sinon vue d'ensemble
+      if (window.__jeu && window.__jeu.joueurActif) plateau.vueJoueur(window.__jeu.joueurActif, 700); else plateau.vueDefaut();
+    });
     initAudio();
     document.querySelector('#btn-journal').addEventListener('click', () => document.body.classList.toggle('journal-ouvert'));
 
     document.querySelector('#btn-jouer').addEventListener('click', () => {
-      const joueurs = config.joueurs.map((j, i) => ({ nom: (j.nom || '').trim() || nomsParDefaut[i], eclaireur: j.eclaireur }));
+      // les noms sont affichés dans la page : on retire les caractères qui pourraient y injecter du HTML
+      const propre = (s) => (s || '').replace(/[<>&"'`]/g, '').replace(/\s+/g, ' ').trim().slice(0, 16);
+      const joueurs = config.joueurs.map((j, i) => ({ nom: propre(j.nom) || nomsParDefaut[i], eclaireur: j.eclaireur }));
       document.querySelector('#accueil').classList.add('cache');
       document.body.classList.add('en-jeu');
       const jeu = new Jeu({ joueurs, niveau: config.niveau }, plateau, ui);

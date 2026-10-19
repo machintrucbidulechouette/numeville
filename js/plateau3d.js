@@ -10,6 +10,7 @@ class Plateau3D {
     this.TAILLE = 10;          // côté du plateau en unités 3D
     this.HAUT = 0.1;           // hauteur de la face supérieure du plateau
     this.anims = [];
+    this._idVue = 0;
     this.pions = {};
     this.jetons = {};          // id complice -> { bleus: [mesh], rouges: [mesh], badge }
     this.pioches = {};
@@ -328,8 +329,46 @@ class Plateau3D {
     const e = NV.ECLAIREURS[joueur.eclaireur];
     this.anneauActif.material.color.set(e.couleur);
     this.anneauActif.visible = true;
+    const change = this.pionActif !== pion;
     this.pionActif = pion;
     for (const [id, p] of Object.entries(this.pions)) p.userData.portrait.scale.setScalar(id === String(joueur.id) ? 0.78 : 0.56);
+    // petit saut sur place pour signaler à qui c'est le tour
+    if (change && !this.mouvementReduit) {
+      const y0 = pion.position.y, r0 = pion.rotation.y;
+      this.animer(520, (t) => {
+        pion.position.y = y0 + Math.sin(Math.PI * t) * 0.35;
+        pion.rotation.y = r0 + Plateau3D.ease(t) * Math.PI * 2;
+        pion.userData.portrait.scale.setScalar(0.78 + Math.sin(Math.PI * t) * 0.18);
+      }).then(() => { pion.position.y = y0; pion.rotation.y = r0; });
+    }
+  }
+
+  /**
+   * Recentre en douceur la vue sur la zone du plateau où se trouve le pion du joueur actif :
+   * la cible glisse vers le pion (32 %) et la caméra tourne légèrement de son côté.
+   * Le centre du plateau (dés, pioches) reste toujours visible.
+   */
+  vueJoueur(joueur, duree = 1100) {
+    const pion = joueur && this.pions[joueur.id];
+    if (!pion || !this.controles.enabled || this._vue) return Promise.resolve(); // pas pendant une cinématique
+    const p = pion.position;
+    const cible = this.VUE.cible.clone().lerp(new THREE.Vector3(p.x, 0, p.z), 0.32);
+    const lacet = THREE.MathUtils.clamp(p.x * 0.045, -0.22, 0.22);
+    const decalage = this.VUE.pos.clone().sub(this.VUE.cible).applyAxisAngle(new THREE.Vector3(0, 1, 0), lacet);
+    if (p.z < -1) decalage.multiplyScalar(1.06); // pion au fond : on recule un peu
+    return this._glisserVue(cible.clone().add(decalage), cible, this.mouvementReduit ? 1 : duree);
+  }
+
+  /** Transition de caméra annulable (une nouvelle transition ou une cinématique la remplace). */
+  _glisserVue(pos, cible, duree) {
+    const id = ++this._idVue;
+    const a = this.camera.position.clone(), ta = this.controles.target.clone();
+    return this.animer(duree, (t) => {
+      if (id !== this._idVue) return;
+      const k = Plateau3D.ease(t);
+      this.camera.position.lerpVectors(a, pos, k);
+      this.controles.target.lerpVectors(ta, cible, k);
+    });
   }
 
   montrerDestinations(indices, couleurs) {
@@ -585,6 +624,7 @@ class Plateau3D {
 
   /** Déplace la caméra vers (pos, cible) en douceur. */
   voler(pos, cible, duree = 1200) {
+    this._idVue++; // annule un recentrage en cours
     const a = this.camera.position.clone(), ta = this.controles.target.clone();
     return this.animer(duree, (t) => {
       const k = Plateau3D.ease(t);
@@ -725,13 +765,7 @@ class Plateau3D {
   }
 
   vueDefaut() {
-    const a = this.camera.position.clone(), b = this.VUE.pos.clone();
-    const ta = this.controles.target.clone(), tb = this.VUE.cible.clone();
-    return this.animer(700, (t) => {
-      const k = Plateau3D.ease(t);
-      this.camera.position.lerpVectors(a, b, k);
-      this.controles.target.lerpVectors(ta, tb, k);
-    });
+    return this._glisserVue(this.VUE.pos.clone(), this.VUE.cible.clone(), 700);
   }
 
   _boucle() {

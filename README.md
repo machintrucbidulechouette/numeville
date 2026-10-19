@@ -34,15 +34,18 @@ Si besoin, on peut aussi servir le dossier : `python3 -m http.server` puis http:
 - **Cinématiques** courtes aux moments clés : ouverture sur la ville, face-à-face, attaque du Dark Master,
   fin de manche, Complice sauvé (gerbe de lumière) ou perdu (fumée, lumière qui s'éteint), fin de partie.
   Elles se passent d'un clic ou avec Espace, et se coupent avec le bouton 🎬 (choix mémorisé).
-- **Animations de retour** : jetons qui tombent sur le plateau et sur les fiches, fiche qui s'illumine
+- **Caméra qui suit le joueur actif** : au début de chaque tour et après le déplacement, la vue glisse en douceur vers la zone du pion
+  (le centre du plateau, avec les dés et les pioches, reste visible). Le bouton 🎯 recentre sur le joueur actif.
+- **Animations de retour** : petit saut du pion quand c'est son tour, jetons qui tombent sur le plateau et sur les fiches, fiche qui s'illumine
   à chaque jeton, résultat du dé affiché au-dessus du dé.
-- **Musique d'ambiance générative** (synthwave « ville numérique la nuit ») qui suit la partie :
-  calme en exploration, plus tendue quand un Complice est en danger ou lors d'une attaque,
-  lumineuse quand un Complice est sauvé, sombre en cas de défaite. Elle baisse pendant les questions.
-- **Effets sonores** : dé qui roule et rebondit, pion qui se pose, jetons bleu (cristallin) et rouge (grave),
+- **Deux musiques d'ambiance génératives au choix** : *Néons* (synthwave nocturne) et *Circuit* (lo-fi rétro, sons 8 bits).
+  Chacune est découpée en sections (couplet, refrain, pont) avec une mélodie renouvelée à chaque cycle
+  (cycle d'environ 1 min 30), et suit la partie : calme en exploration, tendue quand un Complice est en danger
+  ou lors d'une attaque, lumineuse quand un Complice est sauvé, sombre en cas de défaite. Elle baisse pendant les questions.
+- **Effets sonores** : dé lancé réaliste (trois rebonds synchronisés avec l'animation, roulement sur les arêtes, oscillation finale), pion qui se pose, jetons bleu (cristallin) et rouge (grave),
   cartes, bonne / mauvaise réponse, face-à-face, tonnerre du Dark Master, gong de fin de manche,
   Complice sauvé / perdu, fanfare de victoire, thème de défaite.
-- **Réglages du son** (bouton 🔊) : volume général, musique, effets, coupure (touche M), mémorisés.
+- **Réglages du son** (bouton 🔊) : volume général (100 % par défaut), musique (60 %), effets (100 %), choix du morceau, coupure (touche M), mémorisés.
   Tout est synthétisé par la Web Audio API : aucun fichier audio téléchargé (éco-conception).
 - Les animations sont réduites si le système le demande (« réduire les animations »).
 - Contrastes des boutons vérifiés au repos, au survol et au focus (WCAG AA).
