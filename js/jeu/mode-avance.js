@@ -71,7 +71,7 @@ class ModeAvance {
     if (hasard) options.push({ label: '🎲 Au hasard', valeur: '__hasard' });
     const info = aide ? { caseAvance: aide } : undefined;
     const g = await this.ui.choisir(titre, texte, options, info);
-    if (g === '__hasard') return indices[Math.floor(Math.random() * indices.length)];
+    if (g === '__hasard') return indices[Math.floor(NV_alea() * indices.length)];
     const cases = groupes.find((x) => x.cle === g).cases;
     if (cases.length === 1) return cases[0];
     return this.ui.choisir(titre, 'Sur quelle case ?', cases.map((i) => ({ label: this.libelleCase(i), valeur: i })), info);
@@ -115,10 +115,16 @@ class ModeAvance {
   /** Demande au détenteur s'il joue sa carte maintenant. */
   async proposer(j, carte, type, question, oui = 'Utiliser', non = 'Pas maintenant') {
     const icone = type === 'objet' ? '🧰' : '⚡';
-    const r = await this.ui.choisir(`${icone} ${carte.titre}`,
+    return this.parJoueur(j, () => this.ui.choisir(`${icone} ${carte.titre}`,
       `<span class="carte-rappel">${carte.texte}</span><b>${j.nom}</b>, ${question}`,
-      [{ label: oui, valeur: true }, { label: non, valeur: false }]);
-    return r;
+      [{ label: oui, valeur: true }, { label: non, valeur: false }]));
+  }
+
+  /** La décision revient au détenteur de la carte (en ligne : c'est lui qui clique), puis la main revient. */
+  async parJoueur(j, f) {
+    const avant = this._decideur;
+    this._decideur = j;
+    try { return await f(); } finally { this._decideur = avant; }
   }
 
   libelleReste(p) {
@@ -359,9 +365,9 @@ class ModeAvance {
     const j = this.joueurs.find((x) => this.pouvoirDispo(x, 'veilleur'));
     if (!j || !await this.proposer(j, j.pouvoir.carte, 'pouvoir', 'regarder la prochaine carte « Fin de manche » ?', 'Regarder', 'Non')) return;
     const dessus = this.piocheFin[this.piocheFin.length - 1];
-    const choix = await this.ui.choisir('⚡ Veilleur de Numéville', `${j.nom} découvre la prochaine carte : <b>${dessus.titre}</b><br><span class="carte-rappel">${dessus.texte}</span>`, [
+    const choix = await this.parJoueur(j, () => this.ui.choisir('⚡ Veilleur de Numéville', `${j.nom} découvre la prochaine carte : <b>${dessus.titre}</b><br><span class="carte-rappel">${dessus.texte}</span>`, [
       { label: 'La reposer dessus', valeur: 'dessus' }, { label: 'La mettre sous la pioche', valeur: 'dessous' },
-    ]);
+    ]));
     if (choix === 'dessous') { this.piocheFin.unshift(this.piocheFin.pop()); this.ui.log(`👁️ Veilleur de Numéville : ${this.tagJ(j)} glisse une carte sous la pioche.`); }
     else this.ui.log(`👁️ Veilleur de Numéville : ${this.tagJ(j)} laisse la carte sur la pioche.`);
   }

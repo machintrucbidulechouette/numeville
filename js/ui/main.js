@@ -180,17 +180,27 @@
     initAudio();
     document.querySelector('#btn-journal').addEventListener('click', () => document.body.classList.toggle('journal-ouvert'));
 
-    document.querySelector('#btn-jouer').addEventListener('click', () => {
-      // les noms sont affichés dans la page : on retire les caractères qui pourraient y injecter du HTML
-      const propre = (s) => (s || '').replace(/[<>&"'`]/g, '').replace(/\s+/g, ' ').trim().slice(0, 16);
-      const joueurs = config.joueurs.map((j, i) => ({ nom: propre(j.nom) || nomsParDefaut[i], eclaireur: j.eclaireur }));
+    /**
+     * Démarre une partie (sur cet écran ou en ligne).
+     * @param {object} cfg config du Jeu ({joueurs, niveau, avance, graine?})
+     * @param {(jeu:Jeu)=>void} [avant] réglage du jeu avant son lancement (ex. synchronisation en ligne)
+     */
+    window.NV_demarrerPartie = (cfg, avant) => {
       document.querySelector('#accueil').classList.add('cache');
       document.body.classList.add('en-jeu');
-      const jeu = new Jeu({ joueurs, niveau: config.niveau, avance: config.avance }, plateau, ui);
+      const jeu = new Jeu(cfg, plateau, ui);
       window.__jeu = jeu;
+      if (avant) avant(jeu);
       jeu.lancer().catch((e) => { console.error(e); ui.log(`<b>Erreur :</b> ${e.message}`); });
+      return jeu;
+    };
+    document.querySelector('#btn-jouer').addEventListener('click', () => {
+      const joueurs = config.joueurs.map((j, i) => ({ nom: NV_nomPropre(j.nom) || nomsParDefaut[i], eclaireur: j.eclaireur }));
+      NV_demarrerPartie({ joueurs, niveau: config.niveau, avance: config.avance });
     });
     document.querySelector('#chargement').classList.add('cache');
+    window.NV_APP = { ui, plateau };
+    window.dispatchEvent(new Event('nv-pret'));
   }
 
   initAccueil();

@@ -33,7 +33,8 @@ class Plateau3D {
   /** Anime sur `duree` ms ; `cine` = animation de cinématique (peut être passée). */
   animer(duree, maj, cine = false) {
     return new Promise((resolve) => {
-      this.anims.push({ t0: performance.now(), duree, maj, resolve, cine });
+      // vitesse > 1 : rattrapage accéléré d'une partie en ligne après un rechargement
+      this.anims.push({ t0: performance.now(), duree: duree / (this.vitesse || 1), maj, resolve, cine });
     });
   }
   attendre(ms) { return this.animer(ms, () => {}, true); }
@@ -230,7 +231,7 @@ class Plateau3D {
   /** Lance un dé 3D ; renvoie une promesse résolue avec la valeur (1 à 6). */
   lancerDe(couleur) {
     const de = couleur === 'noir' ? this.deNoir : this.deBlanc;
-    const valeur = 1 + Math.floor(Math.random() * 6);
+    const valeur = 1 + Math.floor(NV_alea() * 6); // hasard du jeu (graine partagée en ligne)
     const qFace = this._orientationFace(valeur);
     const qLacet = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), (Math.random() - 0.5) * 1.2);
     const qFinale = qLacet.multiply(qFace);

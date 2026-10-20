@@ -1,0 +1,90 @@
+/* =====================================================================
+   Numéville 3D — jeu en ligne : choix du mode, salon d'attente,
+   tour des autres joueurs, pause et reprise
+   ===================================================================== */
+
+/* ---------------- accueil : sur cet écran / en ligne ---------------- */
+#bloc-local[hidden], #bloc-enligne[hidden], #el-entree[hidden], #el-salon[hidden], #btn-jouer[hidden] { display: none !important; }
+.segment.modes { display: flex; width: fit-content; margin: 18px auto 0; }
+.segment.modes button { padding: 9px 18px; }
+.champ { background: #121a3d; border: 1px solid var(--bord); border-radius: 10px; color: var(--texte); padding: 10px 12px; font: inherit; width: 100%; box-sizing: border-box; }
+.champ:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+#el-nom { max-width: 320px; }
+.el-choix { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 18px; }
+.el-carte { display: flex; flex-direction: column; gap: 8px; padding: 16px; border-radius: 16px; background: #0a0f26; border: 1px solid var(--bord); }
+.el-carte h2 { font-family: var(--titre); font-size: 17px; margin: 0; color: var(--accent); }
+.el-carte p { margin: 0 0 4px; color: var(--doux); font-size: 13.5px; line-height: 1.45; }
+.el-carte .btn { margin-top: auto; align-self: flex-start; }
+.el-ligne { display: flex; gap: 8px; margin-top: auto; }
+.champ.code { font-family: var(--titre); font-weight: 800; font-size: 20px; letter-spacing: 5px; text-transform: uppercase; text-align: center; width: 9.5ch; flex: none; padding: 6px 10px; }
+.el-note { margin: 14px 0 0; color: var(--doux); font-size: 12.5px; line-height: 1.5; }
+#el-message { margin: 14px 0 0; min-height: 1px; line-height: 1.45; }
+#el-message:empty { display: none; }
+#el-message.erreur { color: #ffb3b8; padding: 10px 12px; border-radius: 12px; background: rgba(255, 58, 68, .12); border: 1px solid rgba(255, 58, 68, .45); }
+body.el-occupe #bloc-enligne { cursor: progress; }
+
+/* ---------------- salon d'attente ---------------- */
+.salon-tete { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 18px; }
+.salon-tete h2 { font-family: var(--titre); font-size: 22px; margin: 0; color: var(--texte); }
+.salon-tete p { margin: 2px 0 0; color: var(--doux); font-size: 13.5px; }
+.salon-code { display: flex; align-items: center; gap: 10px; }
+.salon-code b { font-family: var(--titre); font-weight: 800; font-size: 34px; letter-spacing: 6px; color: #fff; padding: 2px 14px; border-radius: 12px; background: #0a0f26; border: 1px dashed rgba(56, 225, 255, .55); }
+.reglage h2 small { font-size: 13px; color: var(--doux); font-weight: 500; margin-left: 6px; }
+.salon-joueurs { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.salon-joueurs li { --c: #5a6496; display: grid; grid-template-columns: 38px 1fr auto; grid-template-rows: auto auto; column-gap: 10px; align-items: center; padding: 8px 12px; border-radius: 14px; background: #0a0f26; border: 1px solid color-mix(in srgb, var(--c) 45%, transparent); }
+.salon-joueurs li img, .salon-joueurs .pastille-ecl { grid-row: 1 / 3; width: 38px; height: 38px; border-radius: 50%; object-fit: cover; object-position: 50% 8%; border: 2px solid var(--c); }
+.salon-joueurs .pastille-ecl { display: block; box-sizing: border-box; border-style: dashed; background: #121a3d; }
+.salon-joueurs .qui { font-size: 14.5px; }
+.salon-joueurs .qui small { color: var(--doux); font-size: 12px; }
+.salon-joueurs .qui .hote { color: #ffd23f; }
+.salon-joueurs .role { grid-column: 2; font-size: 12.5px; color: var(--c); font-weight: 600; }
+.salon-joueurs .etat-co { grid-column: 3; grid-row: 1 / 3; font-size: 12px; }
+.salon-joueurs li.vide { color: var(--doux); font-size: 13.5px; border-style: dashed; border-color: var(--bord); }
+.salon-joueurs li.vide span:last-child { grid-column: 2 / 4; grid-row: 1 / 3; }
+.salon-joueurs li.absent { opacity: .55; }
+.salon-seuils { margin: 8px 0 12px; color: var(--doux); font-size: 13.5px; }
+.salon-resume { margin: 0; color: var(--texte); font-size: 14px; line-height: 1.6; }
+.salon-resume small { color: var(--doux); }
+.salon-actions { align-items: center; }
+.el-attente { margin: 0 0 0 auto; color: var(--doux); font-size: 14px; }
+.salon-info { margin: 10px 0 0; text-align: right; color: #ffd23f; font-size: 13px; }
+
+/* ---------------- en partie : à qui le tour ? ---------------- */
+.el-tour { margin: 10px auto 0; padding: 6px 12px; width: fit-content; max-width: 100%; border-radius: 999px; font-size: 13.5px; color: var(--doux); background: rgba(255, 255, 255, .05); border: 1px solid var(--bord); }
+.boite > .el-tour { margin: 0 auto 12px; }
+.el-tour.moi { color: #050816; font-weight: 600; background: linear-gradient(135deg, #5ce7ff, #a99bff); border-color: transparent; }
+body.en-ligne.a-toi #actions { border-color: rgba(56, 225, 255, .7); box-shadow: 0 0 0 1px rgba(56, 225, 255, .35), 0 10px 40px rgba(56, 225, 255, .18); }
+/* boutons grisés des autres joueurs : on comprend qu'on regarde, sans que ce soit illisible */
+body.en-ligne [data-verrou] { cursor: not-allowed; }
+body.en-ligne .option[data-verrou="actif"], body.en-ligne .btn[data-verrou="actif"] { opacity: .62; }
+
+/* code de la partie et joueurs connectés (barre du haut) */
+#el-hud { display: flex; align-items: center; gap: 8px; padding: 4px 10px; border-radius: 999px; background: rgba(10, 15, 38, .8); border: 1px solid var(--bord); font-size: 12.5px; white-space: nowrap; }
+#el-hud .el-code { font-family: var(--titre); font-weight: 700; letter-spacing: 1.5px; color: var(--accent); }
+#el-hud .el-moi { color: var(--doux); }
+#el-hud .el-points { display: flex; gap: 4px; }
+#el-hud i { width: 10px; height: 10px; border-radius: 50%; background: var(--c); box-shadow: 0 0 6px var(--c); }
+#el-hud i.deco { background: transparent; border: 2px solid var(--c); box-shadow: none; box-sizing: border-box; opacity: .7; }
+
+/* joueur déconnecté : pause puis « Jouer à sa place » */
+#el-pause { position: fixed; z-index: 40; left: 50%; top: calc(var(--hud-h, 70px) + 14px); transform: translateX(-50%); width: min(560px, calc(100% - 32px)); box-sizing: border-box;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center; text-align: center;
+  padding: 12px 16px; border-radius: 16px; background: rgba(28, 16, 30, .94); border: 1px solid rgba(255, 210, 63, .55); box-shadow: 0 16px 50px rgba(0, 0, 0, .5); }
+#el-pause p { margin: 0; line-height: 1.45; }
+#el-pause.alerte { border-color: rgba(255, 58, 68, .7); }
+
+/* rattrapage après un rechargement */
+#el-rattrapage { position: fixed; inset: 0; z-index: 45; display: grid; place-content: center; justify-items: center; gap: 10px; background: rgba(7, 10, 22, .88); transition: opacity .4s; }
+#el-rattrapage p { margin: 0; font-family: var(--titre); font-size: 20px; }
+#el-rattrapage small { color: var(--doux); }
+#el-rattrapage.cache { opacity: 0; pointer-events: none; }
+
+/* ---------------- petits écrans ---------------- */
+@media (max-width: 760px) {
+  .el-choix, .salon-joueurs { grid-template-columns: 1fr; }
+  .segment.modes { width: 100%; box-sizing: border-box; }
+  .segment.modes button { flex: 1; padding: 9px 8px; font-size: 13.5px; }
+  .salon-code b { font-size: 28px; letter-spacing: 4px; }
+  .salon-actions { flex-wrap: wrap; }
+  #el-hud .el-moi { display: none; }
+}

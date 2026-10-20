@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="css/animations.css">
   <link rel="stylesheet" href="css/son.css">
   <link rel="stylesheet" href="css/avance.css">
+  <link rel="stylesheet" href="css/en-ligne.css">
   <link rel="stylesheet" href="css/adaptatif.css">
 
   <!-- Three.js r184 (dernière version stable, avril 2026), module ES chargé depuis un CDN
@@ -81,6 +82,11 @@
       <p class="pitch">Le Dark Master et ses 4 Complices diffusent de <b class="rouge">mauvaises pratiques numériques</b> dans la ville.
         Ensemble, parcourez Numéville et répondez aux questions pour propager les <b class="bleu">bonnes pratiques</b> et sauver les Complices.</p>
 
+      <div id="modes" class="segment modes" role="group" aria-label="Où jouer">
+        <button type="button" data-mode="local" class="choisi" aria-pressed="true">📺 Sur cet écran</button><button type="button" data-mode="enligne" aria-pressed="false">🌐 En ligne entre amis</button>
+      </div>
+
+      <div id="bloc-local">
       <div class="reglage">
         <h2>Nombre de joueurs</h2>
         <div id="nb-joueurs" class="segment">
@@ -110,6 +116,35 @@
           <span class="glissiere" aria-hidden="true"></span>
           <span class="interrupteur-texte"><b>Mode avancé</b> : cartes Objet et Pouvoir sur deux cases du plateau.<small>Se joue en niveau Standard ou Expert.</small></span>
         </label>
+      </div>
+      </div>
+
+      <!-- Jeu en ligne : créer / rejoindre une partie, puis salon d'attente (js/reseau/en-ligne.js) -->
+      <div id="bloc-enligne" hidden>
+        <div id="el-entree">
+          <div class="reglage">
+            <h2><label for="el-nom">Ton prénom</label></h2>
+            <input type="text" id="el-nom" class="champ" maxlength="16" autocomplete="nickname" placeholder="Ex. Juliette">
+          </div>
+          <div class="el-choix">
+            <div class="el-carte">
+              <h2>Créer une partie</h2>
+              <p>Tu reçois un code à partager avec tes amis (2 à 4 joueurs).</p>
+              <button type="button" id="el-creer" class="btn principal">Créer une partie</button>
+            </div>
+            <div class="el-carte">
+              <h2><label for="el-code">Rejoindre une partie</label></h2>
+              <p>Entre le code reçu d’un ami.</p>
+              <div class="el-ligne">
+                <input type="text" id="el-code" class="champ code" maxlength="5" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="CODE">
+                <button type="button" id="el-rejoindre" class="btn">Rejoindre</button>
+              </div>
+            </div>
+          </div>
+          <p class="el-note">Aucun compte n’est demandé : le jeu utilise une connexion anonyme, sans e-mail. Seuls le prénom et l’Éclaireur choisis sont partagés avec les joueurs de la partie.</p>
+        </div>
+        <div id="el-salon" hidden></div>
+        <p id="el-message" role="status" aria-live="polite"></p>
       </div>
 
       <div class="accueil-actions">
@@ -177,6 +212,10 @@
   <!-- Interface et démarrage -->
   <script src="js/ui/interface.js"></script>
   <script src="js/ui/main.js"></script>
+  <!-- Jeu en ligne : configuration Firebase, puis salon et synchronisation
+       (le SDK Firebase n'est téléchargé que si l'on choisit « En ligne ») -->
+  <script src="js/reseau/config-firebase.js"></script>
+  <script src="js/reseau/en-ligne.js"></script>
 
   <script type="module">
     import * as THREE from 'three';

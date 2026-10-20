@@ -124,7 +124,7 @@ class AudioNumeville {
      EFFETS SONORES
      ================================================================= */
   effet(nom, opt = {}) {
-    if (!this.ctx || this.reglages.muet) return;
+    if (!this.ctx || this.reglages.muet || window.NV_RATTRAPAGE) return;
     const f = this['_' + nom];
     if (f) { try { f.call(this, opt); } catch (e) { /* un son raté ne doit jamais bloquer le jeu */ } }
   }

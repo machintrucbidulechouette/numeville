@@ -9,7 +9,7 @@
 const melanger = (t) => {
   const a = t.slice();
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(NV_alea() * (i + 1));
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
@@ -17,9 +17,11 @@ const melanger = (t) => {
 
 class Jeu {
   /**
-   * @param {{joueurs:{nom:string, eclaireur:string}[], niveau:string, avance:boolean}} config
+   * @param {{joueurs:{nom:string, eclaireur:string}[], niveau:string, avance:boolean, graine?:number}} config
+   *   graine : en ligne, la même graine chez tous les joueurs donne les mêmes dés et les mêmes pioches.
    */
   constructor(config, plateau, ui) {
+    if (config.graine !== undefined) NV_graine(config.graine);
     this.plateau = plateau;
     this.ui = ui;
     this.niveau = config.niveau;
@@ -64,6 +66,18 @@ class Jeu {
   tagJ(j) { return `<b style="color:${NV.ECLAIREURS[j.eclaireur].couleur}">${j.nom}</b>`; }
   actifs(filtre = () => true) { return NV.ORDRE_COMPLICES.filter((id) => this.complices[id].statut === 'actif' && filtre(this.complices[id], id)); }
   compte(statut) { return NV.ORDRE_COMPLICES.filter((id) => this.complices[id].statut === statut).length; }
+  /**
+   * Joueur qui doit décider au moment présent (utile en ligne : lui seul peut cliquer).
+   * Par défaut le joueur actif ; une carte jouée par un autre joueur (Coffre-fort, Mémoire longue,
+   * Veilleur…) passe la main à son détenteur le temps de la décision. Avant le premier tour : l'hôte (joueur 1).
+   */
+  decideur() { return this._decideur || this.joueurActif || this.joueurs[0]; }
+  /** Résumé de l'état de la partie (contrôle de synchronisation en ligne). */
+  empreinte() {
+    const c = NV.ORDRE_COMPLICES.map((id) => { const x = this.complices[id]; return `${x.bleus}${x.rouges}${x.statut[0]}`; }).join('');
+    const j = this.joueurs.map((x) => `${x.case}${x.objet ? x.objet.id : ''}${x.pouvoir ? x.pouvoir.carte.id : ''}`).join('|');
+    return `${this.manche}:${c}:${j}:${this.piocheFin.length}:${this.piocheAttaque.length}`;
+  }
   sync() {
     if (!this.fin && window.NV_AUDIO) NV_AUDIO.definirFond(this.ambianceDeFond());
     // ambiance de nuit tant que « Nuit blanche sur les écrans » est programmée ou active

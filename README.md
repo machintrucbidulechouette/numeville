@@ -13,9 +13,32 @@ Aucun serveur n'est requis : les images utilisées en 3D et les questions sont e
 
 Si besoin, on peut aussi servir le dossier : `python3 -m http.server` puis http://localhost:8000
 
+## Jouer en ligne entre amis
+
+Sur l'écran d'accueil, choisir **🌐 En ligne entre amis** :
+1. un joueur entre son prénom et clique sur **Créer une partie** : il reçoit un **code** de 5 caractères (et un lien à copier) ;
+2. ses amis (2 à 4 joueurs en tout) entrent ce code, ou ouvrent le lien, puis **Rejoindre** ;
+3. dans le salon, chacun choisit son Éclaireur ; l'hôte règle le niveau et le mode avancé, puis lance la partie.
+
+Pendant la partie, seul le joueur dont c'est le tour peut cliquer ; les autres voient la même chose en direct
+(« C'est à … de jouer »). Une carte jouée hors de son tour (Coffre-fort, Mémoire longue, Veilleur…) est décidée par son détenteur.
+- **Rechargement** de la page : on retrouve sa place, la partie est rejouée en accéléré jusqu'au moment présent.
+- **Déconnexion** : la partie se met en pause ; au bout de 2 minutes, un autre joueur peut **jouer à sa place**.
+  Le joueur reprend la main dès qu'il revient (dans le même onglet).
+- Aucun compte : connexion **anonyme** (un identifiant invisible par onglet). Seuls le prénom et l'Éclaireur sont partagés.
+
+Fonctionnement : chaque navigateur fait tourner le même moteur de règles. Les dés et les pioches viennent d'une
+**graine partagée**, si bien que seuls les **clics des joueurs** transitent par **Firebase Realtime Database**
+(quelques octets par action). Le SDK Firebase n'est téléchargé que si l'on choisit le jeu en ligne.
+Le jeu en ligne nécessite le site publié (GitHub Pages) ou un serveur local : il ne marche pas en ouvrant `index.html` directement.
+
+Règles de sécurité de la base : `firebase-regles.json` (à coller dans Firebase › Realtime Database › Règles).
+Seuls les membres d'une partie peuvent la lire ; on ne peut plus rejoindre une partie commencée ;
+seul l'hôte change les réglages et lance la partie ; une action déjà jouée ne peut pas être réécrite.
+
 ## Ce qui est implémenté (règles du jeu de base)
 
-- 2 à 4 joueurs en local (même écran), choix des Éclaireurs (Ana, Tom, Emily, Hakim) et du niveau
+- 2 à 4 joueurs en local (même écran) ou en ligne, choix des Éclaireurs (Ana, Tom, Emily, Hakim) et du niveau
   (Découverte / Standard / Expert, avec les seuils de jetons prévus par les règles).
 - Plateau 3D texturé avec le plateau officiel : 15 cases en boucle, 4 cases départ, portraits des Complices, la Place.
 - Premier joueur désigné au dé blanc, puis sens horaire.
@@ -79,9 +102,10 @@ css/
   animations.css           animations légères et bandes des cinématiques
   son.css                  panneau des réglages du son
   avance.css               mode avancé : interrupteur, cartes en main, minute de concertation
+  en-ligne.css             jeu en ligne : choix du mode, salon d'attente, tour des autres joueurs, pause
   adaptatif.css            petits écrans et « réduire les animations » (chargé en dernier)
 js/
-  outils.js                NV_etendre : découpe une classe en plusieurs fichiers thématiques
+  outils.js                NV_etendre (classe découpée en plusieurs fichiers), NV_alea (hasard à graine), NV_nomPropre
   data/
     regles.js              plateau, Complices, Éclaireurs, seuils, cartes Dark Master
     cartes-avancees.js     les 13 Objets et 13 Pouvoirs
@@ -103,6 +127,11 @@ js/
   ui/
     interface.js           interface HTML : actions, questions, cartes, choix, main du joueur, fin de partie
     main.js                écran d'accueil, réglages du son, démarrage
+  reseau/
+    config-firebase.js     identifiants (publics) du projet Firebase et version du SDK
+    backend-firebase.js    accès à Firebase : connexion anonyme, lecture/écriture, présence (module chargé à la demande)
+    en-ligne.js            créer / rejoindre une partie, salon, synchronisation des clics, pause et reprise
+firebase-regles.json       règles de sécurité de la Realtime Database
 assets/img/                visuels extraits du Print & Play (fiches, cartes, Éclaireurs)
 ```
 
