@@ -41,3 +41,4 @@
 .accueil-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
 .accueil-actions .principal { font-size: 17px; padding: 12px 28px; }
 .accueil-boite .credits { text-align: center; margin: 16px 0 0; }
+.note-rejouer { margin: 16px 0 0; padding: 10px 14px; border-radius: 12px; background: rgba(56, 225, 255, .1); border: 1px solid rgba(56, 225, 255, .4); color: var(--texte); font-size: 14px; line-height: 1.45; }

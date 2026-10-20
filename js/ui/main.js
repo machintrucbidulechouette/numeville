@@ -6,6 +6,7 @@
   const config = { nb: 2, niveau: 'standard', joueurs: [], avance: false };
   const ordreEcl = ['ana', 'tom', 'emily', 'hakim'];
   const nomsParDefaut = ['Joueur 1', 'Joueur 2', 'Joueur 3', 'Joueur 4'];
+  const CLE_REJOUER = 'numeville-rejouer-local';
 
   function majSeuils() {
     const [b, r] = NV.SEUILS[config.nb][config.niveau];
@@ -64,6 +65,21 @@
       if (config.avance && config.niveau === 'decouverte') document.querySelector('#niveaux button[data-niveau="standard"]').click();
     });
     if (cAvance.checked) cAvance.dispatchEvent(new Event('change')); // case restée cochée après un rechargement
+
+    // « Rejouer avec les mêmes joueurs » : on revient sur cet écran avec la même équipe et les mêmes réglages
+    let rejouer = null;
+    try { rejouer = JSON.parse(sessionStorage.getItem(CLE_REJOUER) || 'null'); sessionStorage.removeItem(CLE_REJOUER); } catch (e) { /* stockage indisponible */ }
+    if (rejouer && Array.isArray(rejouer.joueurs) && rejouer.joueurs.length >= 2) {
+      document.querySelector(`#nb-joueurs button[data-nb="${rejouer.joueurs.length}"]`)?.click();
+      config.joueurs = rejouer.joueurs.map((j) => ({ nom: NV_nomPropre(j.nom), eclaireur: j.eclaireur }));
+      cAvance.checked = !!rejouer.avance;
+      cAvance.dispatchEvent(new Event('change'));
+      document.querySelector(`#niveaux button[data-niveau="${rejouer.niveau}"]`)?.click();
+      const note = document.createElement('p');
+      note.className = 'note-rejouer';
+      note.textContent = '🔁 Même équipe et mêmes réglages que la partie précédente : modifiez si besoin, puis lancez la partie.';
+      document.querySelector('#bloc-local').prepend(note);
+    }
     rendreJoueurs();
   }
 
@@ -196,7 +212,15 @@
     };
     document.querySelector('#btn-jouer').addEventListener('click', () => {
       const joueurs = config.joueurs.map((j, i) => ({ nom: NV_nomPropre(j.nom) || nomsParDefaut[i], eclaireur: j.eclaireur }));
-      NV_demarrerPartie({ joueurs, niveau: config.niveau, avance: config.avance });
+      const reglages = { joueurs, niveau: config.niveau, avance: config.avance };
+      ui.boutonsFin = [{
+        label: '🔁 Rejouer avec les mêmes joueurs', principal: true,
+        action: () => {
+          try { sessionStorage.setItem(CLE_REJOUER, JSON.stringify(reglages)); } catch (e) { /* stockage indisponible */ }
+          location.reload();
+        },
+      }];
+      NV_demarrerPartie(reglages);
     });
     document.querySelector('#chargement').classList.add('cache');
     window.NV_APP = { ui, plateau };

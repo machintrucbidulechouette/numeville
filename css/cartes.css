@@ -120,6 +120,9 @@
 .stats li { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 10px; background: rgba(255,255,255,.04); border-left: 3px solid var(--c); text-align: left; }
 .stats img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; object-position: 50% 8%; }
 .stats span { margin-left: auto; color: var(--doux); font-size: 13px; }
+.fin-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.fin-note { margin: 12px 0 0; font-size: 13.5px; color: var(--doux) !important; }
+.fin-note:empty { display: none; }
 
 /* aide de jeu */
 .regles .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }

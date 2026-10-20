@@ -25,6 +25,9 @@ Pendant la partie, seul le joueur dont c'est le tour peut cliquer ; les autres v
 - **Rechargement** de la page : on retrouve sa place, la partie est rejouée en accéléré jusqu'au moment présent.
 - **Déconnexion** : la partie se met en pause ; au bout de 2 minutes, un autre joueur peut **jouer à sa place**.
   Le joueur reprend la main dès qu'il revient (dans le même onglet).
+- **Rejouer avec le même groupe** (fin de partie) : le premier qui clique ouvre un nouveau salon avec les mêmes réglages
+  (il en devient l'hôte) ; les autres le rejoignent d'un clic, gardent leur Éclaireur s'il est libre et peuvent en changer.
+  Sur un seul écran, le bouton ramène à l'accueil avec la même équipe et les mêmes réglages.
 - Aucun compte : connexion **anonyme** (un identifiant invisible par onglet). Seuls le prénom et l'Éclaireur sont partagés.
 
 Fonctionnement : chaque navigateur fait tourner le même moteur de règles. Les dés et les pioches viennent d'une
@@ -44,7 +47,8 @@ seul l'hôte change les réglages et lance la partie ; une action déjà jouée 
 - Premier joueur désigné au dé blanc, puis sens horaire.
 - **Dé blanc** : déplacement exact, choix du sens (aperçu des 2 destinations), case occupée → prochaine case libre.
 - **Dé noir** : 1-3 question facile, 4-5 difficile, 6 difficile + carte « Dark Master – Attaque ».
-- **200 questions** (50 par Complice, 25 faciles + 25 difficiles) avec la bonne réponse,
+- **200 questions** (50 par Complice, 25 faciles + 25 difficiles), piochées dans un ordre aléatoire,
+  avec les 3 réponses mélangées à chaque fois (« Les deux » reste en dernier), la bonne réponse,
   l'explication et les sources du livret maître du jeu, affichées après chaque réponse.
 - Jetons bleus / rouges, Complice sauvé ou perdu au seuil (fiche retournée, jetons retirés).
 - **Face-à-face** (portrait d'un Complice) : résultat doublé. **La Place** : question difficile au choix, sans dé noir.

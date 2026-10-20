@@ -207,8 +207,20 @@ class Jeu {
     return q;
   }
 
+  /**
+   * Les 3 réponses sont présentées dans un ordre aléatoire à chaque fois (hasard du jeu : identique
+   * chez tous les joueurs en ligne). Une réponse qui renvoie aux autres (« Les deux ») garde sa place.
+   */
+  melangerReponses(q) {
+    const fixe = (o) => /^\s*(les deux|tous les deux|toutes les réponses|aucune des réponses)\s*\.?\s*$/i.test(o);
+    const libres = q.o.map((_, i) => i).filter((i) => !fixe(q.o[i]));
+    const tirage = melanger(libres);
+    const ordre = q.o.map((_, i) => (fixe(q.o[i]) ? i : tirage[libres.indexOf(i)]));
+    return { ...q, o: ordre.map((i) => q.o[i]), a: ordre.indexOf(q.a) };
+  }
+
   async poserQuestion(j, id, niveau, contexte = {}) {
-    const q = this.piocherQuestion(id, niveau);
+    const q = this.melangerReponses(this.piocherQuestion(id, niveau));
     this.ui.log(`❓ ${this.tagJ(j)} pioche une question <b>${niveau}</b> de ${this.tagC(id)}.`);
     const bon = await this.ui.question(q, { joueur: j, complice: id, niveau, avance: this.avance, ...contexte });
     this.plateau.sonResultat(bon);

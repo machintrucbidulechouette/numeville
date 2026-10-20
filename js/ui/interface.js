@@ -544,7 +544,16 @@ class Interface {
         <p class="bilan">${s} sauvé${s > 1 ? 's' : ''} · ${p} perdu${p > 1 ? 's' : ''} · ${jeu.manche} manche${jeu.manche > 1 ? 's' : ''}</p>
         <div class="fiches-fin">${fiches}</div>
         <ul class="stats">${stats}</ul>`);
-      c.appendChild(el('button', { class: 'btn principal', onclick: () => location.reload() }, 'Nouvelle partie'));
+      // boutons de fin : « Rejouer avec le même groupe » (ajouté par main.js ou en-ligne.js), puis « Nouvelle partie »
+      const actions = el('div', { class: 'fin-actions' });
+      for (const b of this.boutonsFin || []) {
+        const btn = el('button', { class: `btn ${b.principal ? 'principal' : ''}`, onclick: () => b.action(btn) }, b.label);
+        if (b.id) btn.id = b.id;
+        actions.appendChild(btn);
+      }
+      actions.appendChild(el('button', { class: `btn ${(this.boutonsFin || []).length ? '' : 'principal'}`, onclick: () => location.reload() }, 'Nouvelle partie'));
+      c.appendChild(actions);
+      if ((this.boutonsFin || []).length) c.appendChild(el('p', { class: 'fin-note', id: 'fin-note', role: 'status' }, this.noteFin || ''));
       this.ouvrir(c, 'large');
       this.zoneActions.innerHTML = '<p class="consigne">Partie terminée.</p>';
     });

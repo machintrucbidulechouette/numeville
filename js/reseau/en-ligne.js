@@ -28,6 +28,7 @@
   const AFFICHAGE_MIN_MS = 650;     // durée minimale d'affichage d'une fenêtre chez les autres joueurs
   const CLE_SALLE = 'numeville-salle';
   const CLE_NOM = 'numeville-prenom';
+  const CLE_REVANCHE = 'numeville-revanche'; // « Rejouer avec le même groupe » : salon à rejoindre après rechargement
 
   const stock = {
     lire(cle, session) { try { return (session ? sessionStorage : localStorage).getItem(cle); } catch (e) { return null; } },
@@ -107,6 +108,17 @@
       message(`Tu es invité·e dans la partie <b>${echapper(code.value)}</b> : entre ton prénom puis clique sur « Rejoindre ».`);
       (nom.value ? $('#el-rejoindre') : nom).focus();
     }
+    // « Rejouer avec le même groupe » : on rejoint le nouveau salon proposé par un joueur
+    let revanche = null;
+    try { revanche = JSON.parse(stock.lire(CLE_REVANCHE, true) || 'null'); } catch (e) { /* ignoré */ }
+    stock.ecrire(CLE_REVANCHE, null, true);
+    if (revanche && revanche.code) {
+      choisirMode('enligne');
+      nom.value = NV_nomPropre(revanche.nom) || nom.value;
+      code.value = revanche.code;
+      entrer('revanche', revanche.eclaireur);
+      return;
+    }
     // rechargement de la page pendant une partie en ligne : on la rejoint automatiquement
     const reprise = stock.lire(CLE_SALLE, true);
     if (reprise) {
@@ -122,7 +134,7 @@
   }
 
   /** Créer, rejoindre ou reprendre une partie. */
-  async function entrer(action) {
+  async function entrer(action, eclairePrefere) {
     const prenom = NV_nomPropre($('#el-nom').value);
     if (action !== 'reprendre' && !prenom) { message('Entre d’abord ton prénom.', 'erreur'); $('#el-nom').focus(); return; }
     const code = $('#el-code').value.trim().toUpperCase();
@@ -132,7 +144,7 @@
       return;
     }
     occupe(true);
-    message(action === 'creer' ? 'Création de la partie…' : 'Connexion à la partie…');
+    message(action === 'creer' ? 'Création de la partie…' : action === 'revanche' ? 'Connexion au nouveau salon…' : 'Connexion à la partie…');
     try {
       S.fb = await backend();
       S.uid = S.fb.uid;
@@ -144,7 +156,15 @@
     }
     try {
       if (action === 'creer') await creer(prenom);
-      else await rejoindre(code, prenom, action === 'reprendre');
+      else if (action === 'revanche') {
+        // le salon peut mettre un instant à être créé par celui qui a proposé de rejouer
+        for (let essai = 0; ; essai++) {
+          try { await rejoindre(code, prenom, false, eclairePrefere); break; } catch (e) {
+            if (essai >= 8 || e.message !== 'entrée refusée') throw e;
+            await new Promise((r) => setTimeout(r, 1500));
+          }
+        }
+      } else await rejoindre(code, prenom, action === 'reprendre');
     } catch (e) {
       console.warn(e);
       occupe(false);
@@ -154,19 +174,25 @@
     }
   }
 
-  async function creer(prenom) {
+  /**
+   * Crée une salle dont on est l'hôte.
+   * @param {{code?:string, eclaireur?:string, reglages?:{niveau:string, avance:boolean}, sansSuivre?:boolean}} [opt]
+   *   options d'une revanche : code déjà annoncé aux autres, même Éclaireur, mêmes réglages
+   */
+  async function creer(prenom, opt = {}) {
     for (let essai = 0; essai < 5; essai++) {
-      const code = nouveauCode();
+      const code = (essai === 0 && opt.code) || nouveauCode();
       const t = S.fb.heureServeur();
       try {
         await S.fb.ecrire(`parties/${code}`, {
           hote: S.uid, cree: t, etat: 'salon',
-          reglages: { niveau: 'standard', avance: false },
-          membres: { [S.uid]: { nom: prenom, eclaireur: 'ana', en_ligne: true, rejoint: t } },
+          reglages: opt.reglages || { niveau: 'standard', avance: false },
+          membres: { [S.uid]: { nom: prenom, eclaireur: opt.eclaireur || 'ana', en_ligne: true, rejoint: t } },
         });
+        if (opt.sansSuivre) return code;
         S.code = code;
         await suivre();
-        return;
+        return code;
       } catch (e) {
         console.warn('Code déjà pris ou écriture refusée', e);
       }
@@ -176,7 +202,7 @@
     throw err;
   }
 
-  async function rejoindre(code, prenom, reprise) {
+  async function rejoindre(code, prenom, reprise, eclairePrefere) {
     S.code = code;
     const moi = chemin('membres/' + S.uid);
     try {
@@ -211,7 +237,8 @@
       const mien = salle.membres[S.uid];
       const pris = tries.filter(([uid]) => uid !== S.uid).map(([, m]) => m.eclaireur);
       if (!mien.eclaireur || pris.includes(mien.eclaireur)) {
-        const libre = ORDRE_ECL.find((e) => !pris.includes(e));
+        // revanche : on reprend son Éclaireur de la partie précédente s'il est libre
+        const libre = [eclairePrefere, ...ORDRE_ECL].find((e) => e && ORDRE_ECL.includes(e) && !pris.includes(e));
         if (libre) await S.fb.ecrire(moi + '/eclaireur', libre);
       }
     }
@@ -234,7 +261,7 @@
       if (S.synchro) S.synchro.reprendreMesEclaireurs();
     }));
     const erreur = (e) => console.warn('Écoute refusée', e);
-    for (const cle of ['hote', 'etat', 'reglages', 'membres', 'config', 'controle', 'cree']) {
+    for (const cle of ['hote', 'etat', 'reglages', 'membres', 'config', 'controle', 'cree', 'suite']) {
       S.arrets.push(S.fb.ecouter(chemin(cle), (v) => { S.salle[cle] = v; majSalle(cle); }, erreur));
     }
     occupe(false);
@@ -480,6 +507,7 @@
     }
 
     majReseau(cle) {
+      if (cle === 'suite') this.majRevanche();
       if (cle === 'membres' || cle === 'controle') {
         this.majHUD();
         if (this.ctx) this.appliquerMode();
@@ -514,7 +542,11 @@
         S.fb.ecrire(chemin('etat'), 'fini').catch(() => {});
         clearInterval(this.minuteur);
         $('#el-pause')?.remove();
-        return fin(jeu);
+        ui.boutonsFin = [{ id: 'btn-revanche', label: '🔁 Rejouer avec le même groupe', principal: true, action: (b) => this.revanche(b) }];
+        ui.noteFin = '';
+        const r = fin(jeu);
+        this.majRevanche();
+        return r;
       };
     }
 
@@ -629,6 +661,58 @@
         this.plateau.cinematiques = this.cineAvant;
         this.plateau.vitesse = 1;
       }
+    }
+
+    /* ---------- fin de partie : rejouer avec le même groupe ---------- */
+    /**
+     * Le premier qui clique crée un nouveau salon (mêmes réglages, il en devient l'hôte) et l'annonce
+     * dans l'ancienne partie (« suite ») ; les autres y sont conduits en cliquant à leur tour.
+     * Dans ce salon intermédiaire, chacun garde son Éclaireur s'il est libre et peut en changer.
+     */
+    async revanche(bouton) {
+      bouton.disabled = true;
+      const place = this.cfg.joueurs.find((j) => j.uid === S.uid);
+      const nom = NV_nomPropre((place && place.nom) || (S.salle.membres?.[S.uid] || {}).nom) || 'Éclaireur';
+      const eclaireur = place ? place.eclaireur : '';
+      const aller = (code) => {
+        stock.ecrire(CLE_REVANCHE, JSON.stringify({ code, nom, eclaireur }), true);
+        stock.ecrire(CLE_SALLE, null, true);
+        location.reload();
+      };
+      if (S.salle.suite && S.salle.suite.code) { aller(S.salle.suite.code); return; }
+      const note = $('#fin-note');
+      if (note) note.textContent = 'Création du nouveau salon…';
+      const code = nouveauCode();
+      try {
+        await S.fb.ecrire(chemin('suite'), { code, par: S.uid }); // échoue si quelqu'un a déjà proposé de rejouer
+      } catch (e) {
+        const suite = await S.fb.lire(chemin('suite')).catch(() => null);
+        if (suite && suite.code) { aller(suite.code); return; }
+        bouton.disabled = false;
+        if (note) note.textContent = 'Impossible de créer le nouveau salon. Vérifie que les règles Firebase sont à jour, puis réessaie.';
+        return;
+      }
+      try {
+        const nouveau = await creer(nom, { code, eclaireur, reglages: { niveau: this.cfg.niveau, avance: !!this.cfg.avance }, sansSuivre: true });
+        stock.ecrire(CLE_SALLE, nouveau, true); // au rechargement, on entre directement dans son salon
+        location.reload();
+      } catch (e) {
+        console.warn(e);
+        bouton.disabled = false;
+        if (note) note.textContent = 'Impossible de créer le nouveau salon. Réessaie dans un instant.';
+      }
+    }
+
+    /** Quelqu'un a proposé de rejouer : le bouton de fin mène à son salon. */
+    majRevanche() {
+      const suite = S.salle.suite;
+      const b = $('#btn-revanche');
+      if (!suite || !suite.code || !b || suite.par === S.uid) return;
+      const qui = NV_nomPropre((S.salle.membres?.[suite.par] || {}).nom) || 'Un joueur';
+      b.textContent = `🔁 Rejoindre ${qui} dans le nouveau salon`;
+      b.disabled = false;
+      const note = $('#fin-note');
+      if (note) note.textContent = `${qui} propose de rejouer : le salon vous attend (code ${suite.code}).`;
     }
 
     desynchronise(raison) {
