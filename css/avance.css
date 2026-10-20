@@ -16,7 +16,7 @@
 
 /* cartes en main du joueur actif (au-dessus de la barre d'actions) */
 #main-joueur {
-  position: fixed; left: 50%; transform: translateX(-50%); bottom: 112px; z-index: 6;
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--actions-h, 80px) + 28px); z-index: 6;
   display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px;
   max-width: min(640px, calc(100% - 32px));
 }
@@ -45,7 +45,7 @@ body.cinema #main-joueur { opacity: 0; pointer-events: none; }
 .concertation.fini { background: #fff3e0; color: #7a4a00; }
 
 @media (max-width: 760px) {
-  #main-joueur { bottom: 128px; max-width: calc(100% - 12px); gap: 5px; }
+  #main-joueur { bottom: calc(max(6px, env(safe-area-inset-bottom, 0px)) + var(--actions-h, 120px) + 6px); max-width: calc(100% - 12px); gap: 5px; }
   .puce-carte { padding: 5px 10px; font-size: 12.5px; }
 }
 

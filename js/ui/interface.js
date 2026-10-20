@@ -24,6 +24,10 @@ class Interface {
     this.journal = $('#journal-liste');
     this.modale = $('#modale');
     this._construireFiches();
+    // hauteur réelle de la barre d'actions : les cartes en main et le journal se placent au-dessus
+    if (window.ResizeObserver) {
+      new ResizeObserver(() => document.documentElement.style.setProperty('--actions-h', this.zoneActions.offsetHeight + 'px')).observe(this.zoneActions);
+    }
     $('#cinema').addEventListener('click', () => this.plateau && this.plateau.passerCinematique());
     document.addEventListener('keydown', (e) => {
       if (e.target.tagName === 'INPUT') return;

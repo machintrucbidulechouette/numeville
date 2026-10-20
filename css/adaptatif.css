@@ -48,8 +48,10 @@
   .consigne { font-size: 14px; margin-bottom: 8px; }
   .boutons { gap: 6px; }
   .boutons .btn { padding: 9px 14px; font-size: 14px; }
+  #actions { max-height: 46vh; max-height: 46dvh; overflow-y: auto; overscroll-behavior: contain; }
 
-  #journal, body.journal-ouvert #journal { top: 130px; bottom: 140px; left: 6px; right: 6px; width: auto; }
+  #journal, body.journal-ouvert #journal { top: calc(max(6px, env(safe-area-inset-top, 0px)) + var(--hud-h, 68px) + 64px); bottom: calc(var(--actions-h, 120px) + 16px); left: 6px; right: 6px; width: auto; }
+  #journal-liste li { animation: none; }
 
   /* Cinématiques */
   #cinema .legende { bottom: calc(13vh + 56px); padding: 0 14px; }
@@ -58,11 +60,44 @@
   #cinema .passer { top: auto; bottom: 10px; transform: none; padding: 6px 12px; font-size: 13px; }
 
   /* Accueil et modales */
+  /* 16 px minimum dans les champs : sinon iPhone zoome la page quand on touche le champ */
+  .ligne-joueur input, .champ { font-size: 16px; }
+  .champ.code { font-size: 20px; }
   .ligne-joueur { grid-template-columns: 26px 1fr; }
   .ligne-joueur .eclaireurs { grid-column: 1 / -1; }
   .accueil-boite { padding: 20px 16px; }
   .cq-q { font-size: 18px !important; }
+  #modale, #aide { padding: max(10px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); }
+  .boite { --marge-v: 20px; padding: 16px; border-radius: 16px; }
+  .boite h2 { font-size: 21px; }
+  .carte-question header { padding: 10px 12px; }
+  .cq-nom { font-size: 24px; }
+  .cq-joueur { font-size: 13px; }
+  .cq-corps { padding: 12px 14px 16px; }
+  .cq-num { font-size: 28px; }
+  .cq-options .option { padding: 10px 12px; font-size: 14.5px; gap: 10px; }
+  .lettre { width: 28px; height: 28px; font-size: 16px; }
+  .verdict { font-size: 18px; }
+  .choix-complices { gap: 8px; }
+  .choix-complices .carte-complice { flex-basis: 96px; min-width: 80px; }
+  .fin-partie h1 { font-size: 34px; }
+  .fiches-fin { grid-template-columns: repeat(2, 1fr); }
   #panneau-audio { left: 6px; right: 6px; width: auto; top: calc(76px + env(safe-area-inset-top, 0px)); max-height: calc(100% - 90px); overflow-y: auto; }
+}
+
+/* Téléphone en paysage : peu de hauteur, on garde le plateau visible */
+@media (max-height: 500px) and (orientation: landscape) {
+  .fiche p, .fiche .fiche-portrait { display: none; }
+  #fiches { gap: 6px; }
+  .fiche { padding: 4px 8px; }
+  .fiche h3 { font-size: 13px; }
+  .pistes { margin-top: 3px; gap: 2px; }
+  .pastille { width: 10px; height: 10px; }
+  #actions { padding: 8px 10px; }
+  .consigne { margin-bottom: 6px; }
+  .boutons .btn { padding: 7px 12px; }
+  #cinema .bande { height: 9vh; }
+  #cinema .legende { bottom: calc(9vh + 12px); }
 }
 
 /* Respect de « réduire les animations » du système */

@@ -52,3 +52,6 @@ body.cinema #hud, body.cinema #fiches, body.cinema #journal, body.cinema #action
 #actions { transition: opacity .4s; }
 #cinema .legende.change { animation: legende-change .6s ease-out; }
 @keyframes legende-change { from { opacity: 0; transform: translateY(10px); } }
+
+/* le bouton « Passer » n'apparaît que pendant une cinématique (il dépassait sous l'écran en paysage) */
+body:not(.cinema) #cinema .passer { visibility: hidden; }

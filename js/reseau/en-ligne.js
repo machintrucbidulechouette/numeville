@@ -589,7 +589,7 @@
       if (!ctx || ctx.fini || !clic || this.attenteAffichage) return;
       // chez les autres joueurs, une fenêtre reste visible un court instant avant de se fermer
       const reste = AFFICHAGE_MIN_MS - (performance.now() - ctx.debut);
-      if (!this.rattrapage && clic.par !== S.uid && reste > 0) {
+      if (!this.rattrapage && !this.presse && clic.par !== S.uid && reste > 0) {
         this.attenteAffichage = setTimeout(() => { this.attenteAffichage = null; this.consommer(); }, reste);
         return;
       }
@@ -601,6 +601,7 @@
       if (!b) { this.desynchronise(`clic ${this.prochain} : bouton ${clic.v} introuvable`); return; }
       this.prochain++;
       this.envoi = false;
+      this.majRetard();
       if (b.dataset.verrou) { if (b.dataset.verrou === 'actif') b.disabled = false; delete b.dataset.verrou; }
       this.rejeu = true;
       try { b.click(); } finally { this.rejeu = false; }
@@ -608,6 +609,26 @@
       // la fenêtre peut continuer (ex. « Continuer » après la réponse à une question) : on la reverrouille,
       // puis on traite le clic suivant quand le moteur de jeu a avancé
       setTimeout(() => { if (this.ctx === ctx && !ctx.fini) this.appliquerMode(); this.consommer(); }, 0);
+    }
+
+    /**
+     * Un joueur en retard de plusieurs actions (onglet laissé en arrière-plan, téléphone lent) :
+     * animations accélérées et cinématiques passées jusqu'à ce qu'il ait rattrapé les autres.
+     */
+    majRetard() {
+      if (this.rattrapage) return;
+      const retard = this.clics.length - this.prochain;
+      if (retard >= 3 && !this.presse) {
+        this.presse = true;
+        this.cineAvant = this.plateau.cinematiques;
+        this.plateau.cinematiques = false;
+        this.plateau.vitesse = 6;
+        if (this.plateau.enCinematique) this.plateau.passerCinematique();
+      } else if (retard === 0 && this.presse) {
+        this.presse = false;
+        this.plateau.cinematiques = this.cineAvant;
+        this.plateau.vitesse = 1;
+      }
     }
 
     desynchronise(raison) {
@@ -634,6 +655,8 @@
       const ctx = this.ctx;
       let div = $('#el-pause:not(.alerte)');
       const qui = ctx ? this.controleur(ctx.place) : null;
+      // un joueur revenu repart de zéro s'il se déconnecte à nouveau plus tard
+      for (const uid of Object.keys(this.absence)) if (enLigne(uid)) delete this.absence[uid];
       if (!ctx || this.rattrapage || enLigne(qui) || qui === S.uid) { if (div) div.remove(); return; }
       if (!this.absence[qui]) this.absence[qui] = Date.now();
       const reste = Math.max(0, PAUSE_MS - (Date.now() - this.absence[qui]));

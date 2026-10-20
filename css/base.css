@@ -26,6 +26,8 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: var(--fond); color: var(--texte); font-family: var(--corps); font-size: 15px; }
 button { font: inherit; color: inherit; cursor: pointer; }
+/* pas de double-tap zoom ni de délai sur les boutons au toucher */
+button, .option, label { touch-action: manipulation; }
 img { display: block; }
 
 #scene { position: fixed; inset: 0; }
