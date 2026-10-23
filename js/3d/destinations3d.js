@@ -1,10 +1,10 @@
 /* =====================================================================
    Numéville 3D — cases où l'on peut aller (tous les modes)
    Pendant un choix de case (sens du déplacement, téléportation, case Objet / Pouvoir) :
-   • chaque case possible reçoit un disque, un anneau épais qui respire, un faisceau de
-     lumière et une balise flottante (↻ / ↺ ou ★) qui reste visible au-dessus des pions ;
+   • chaque case possible reçoit un fin liseré lumineux sur son bord et une petite balise
+     (↻ / ↺ ou ★) qui reste visible au-dessus des pions ;
    • de petites flèches défilent sur le chemin que suivra le pion ;
-   • le reste du plateau s'assombrit légèrement ;
+   • le reste du plateau s'assombrit très légèrement ;
    • survoler un bouton (ou la case en 3D) met sa destination en avant, cliquer la case en 3D
      revient à cliquer le bouton (donc fonctionne aussi en ligne).
    (méthodes ajoutées à la classe Plateau3D, voir js/3d/plateau3d.js)
@@ -17,20 +17,12 @@ class Destinations3D {
     D.groupe = new THREE.Group();
     this.scene.add(D.groupe);
     D.geoDisque = new THREE.CircleGeometry(1, 48);
-    D.geoAnneau = new THREE.RingGeometry(1.04, 1.32, 48);
-    D.geoFaisceau = new THREE.CylinderGeometry(0.62, 0.9, 1, 32, 1, true);
-    D.geoFaisceau.translate(0, 0.5, 0);
+    D.geoAnneau = new THREE.RingGeometry(1.0, 1.09, 48);
     D.geoCible = new THREE.CylinderGeometry(1.35, 1.35, 1, 16);
     D.geoCible.translate(0, 0.5, 0);
     const chevron = new THREE.Shape();
     chevron.moveTo(-0.1, 0.12); chevron.lineTo(0.07, 0); chevron.lineTo(-0.1, -0.12); chevron.lineTo(-0.05, 0); chevron.closePath();
     D.geoChevron = new THREE.ShapeGeometry(chevron);
-    // dégradé vertical du faisceau (opaque en bas, transparent en haut)
-    const cv = document.createElement('canvas'); cv.width = 4; cv.height = 128;
-    const g = cv.getContext('2d'), d = g.createLinearGradient(0, 0, 0, 128);
-    d.addColorStop(0, 'rgba(255,255,255,0)'); d.addColorStop(0.55, 'rgba(255,255,255,.25)'); d.addColorStop(1, 'rgba(255,255,255,.85)');
-    g.fillStyle = d; g.fillRect(0, 0, 4, 128);
-    D.texFaisceau = new THREE.CanvasTexture(cv);
     D.ray = new THREE.Raycaster();
     this._ecouterDestinations();
     return D;
@@ -73,21 +65,20 @@ class Destinations3D {
       const g = new THREE.Group();
       g.position.copy(p);
       const disque = new THREE.Mesh(D.geoDisque, base(new THREE.MeshBasicMaterial({ color: couleur, opacity: 0.32, polygonOffset: true, polygonOffsetFactor: -4 })));
-      disque.rotation.x = -Math.PI / 2; disque.position.y = 0.012; disque.scale.setScalar(r * 0.98);
+      disque.rotation.x = -Math.PI / 2; disque.position.y = 0.012; disque.scale.setScalar(r * 0.95);
+      disque.material.opacity = 0;
       const anneau = new THREE.Mesh(D.geoAnneau, base(new THREE.MeshBasicMaterial({ color: couleur, opacity: 0.95, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -4 })));
       anneau.rotation.x = -Math.PI / 2; anneau.position.y = 0.016; anneau.scale.setScalar(r);
-      const hauteur = this.pro ? 2.3 : 1.5;
-      const faisceau = new THREE.Mesh(D.geoFaisceau, base(new THREE.MeshBasicMaterial({ color: couleur, alphaMap: D.texFaisceau, opacity: 0.55, side: THREE.DoubleSide, blending: THREE.AdditiveBlending })));
-      faisceau.scale.set(r, hauteur, r);
+      const hauteur = this.pro ? 1.6 : 1.1;   // zone de clic au-dessus de la case
       const balise = new THREE.Sprite(base(new THREE.SpriteMaterial({ map: this._baliseTexture(couleur, d.symbole || '★'), depthTest: false })));
-      const tb = this.pro ? 0.62 : 0.46;
+      const tb = this.pro ? 0.4 : 0.32;
       balise.scale.set(tb, tb * 1.4, 1);
       balise.renderOrder = 10;
-      balise.userData.y0 = hauteur * 0.62 + tb * 0.5;
+      balise.userData.y0 = (this.pro ? 0.62 : 0.45) + tb * 0.7;
       const cible = new THREE.Mesh(D.geoCible, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false }));
       cible.scale.set(r, hauteur, r);
       cible.userData.k = k;
-      g.add(disque, anneau, faisceau, balise, cible);
+      g.add(disque, anneau, balise, cible);
       D.groupe.add(g);
       // petites flèches sur le chemin (entre les cases, et sur les cases traversées)
       const chevrons = [];
@@ -109,7 +100,7 @@ class Destinations3D {
           }
         }
       }
-      D.liste.push({ k, idx: d.idx, groupe: g, disque, anneau, faisceau, balise, cible, chevrons, r });
+      D.liste.push({ k, idx: d.idx, groupe: g, disque, anneau, balise, cible, chevrons, r, tb });
     });
     D.actif = dests.length > 0;
     D.survol = null;
@@ -150,7 +141,7 @@ class Destinations3D {
     const D = this._dest;
     if (!D) return;
     // assombrit le plateau pendant un choix (les marqueurs ne sont pas concernés)
-    const cibleExpo = D.actif ? D.expoBase * 0.68 : D.expoBase;
+    const cibleExpo = D.actif ? D.expoBase * 0.88 : D.expoBase;
     const e = this.renderer.toneMappingExposure;
     if (Math.abs(e - cibleExpo) > 0.002) this.renderer.toneMappingExposure = e + (cibleExpo - e) * 0.12;
     if (!D.actif) return;
@@ -158,15 +149,14 @@ class Destinations3D {
     for (const o of D.liste) {
       const enAvant = !D.survol || D.survol.includes(o.k);
       const fort = D.survol && D.survol.includes(o.k);
-      const respire = calme ? 1 : 1 + 0.07 * Math.sin(temps * 5);
-      o.anneau.scale.setScalar(o.r * respire * (fort ? 1.14 : 1));
-      o.anneau.material.opacity = enAvant ? 0.95 : 0.3;
-      o.disque.material.opacity = fort ? 0.5 : enAvant ? 0.3 : 0.1;
-      o.faisceau.material.opacity = fort ? 0.95 : enAvant ? 0.55 : 0.12;
-      o.balise.material.opacity = enAvant ? 1 : 0.35;
-      const s = fort ? 1.18 : 1;
-      o.balise.scale.set(s * (this.pro ? 0.62 : 0.46), s * (this.pro ? 0.62 : 0.46) * 1.4, 1);
-      o.balise.position.y = o.balise.userData.y0 + (calme ? 0 : Math.abs(Math.sin(temps * 3.2 + o.k)) * 0.22);
+      const respire = calme ? 1 : 1 + 0.025 * Math.sin(temps * 4);
+      o.anneau.scale.setScalar(o.r * respire * (fort ? 1.05 : 1));
+      o.anneau.material.opacity = enAvant ? 0.9 : 0.25;
+      o.disque.material.opacity = fort ? 0.12 : 0;
+      o.balise.material.opacity = enAvant ? 1 : 0.3;
+      const s = fort ? 1.12 : 1;
+      o.balise.scale.set(s * o.tb, s * o.tb * 1.4, 1);
+      o.balise.position.y = o.balise.userData.y0 + (calme ? 0 : Math.abs(Math.sin(temps * 2.6 + o.k)) * 0.07);
       for (const c of o.chevrons) {
         c.visible = enAvant;
         c.material.opacity = calme ? 0.85 : 0.25 + 0.75 * Math.pow(Math.max(0, Math.sin(temps * 5 - c.userData.n * 0.75)), 2);
