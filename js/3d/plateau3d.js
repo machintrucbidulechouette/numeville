@@ -177,7 +177,7 @@ class Plateau3D {
   }
 
   _marqueurs() {
-    // Anneaux au sol utilisés pour signaler la case du joueur actif et les destinations possibles
+    // Anneau au sol qui signale la case du joueur actif
     const geo = new THREE.RingGeometry(0.33, 0.43, 48);
     const creer = () => {
       const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false }));
@@ -187,7 +187,7 @@ class Plateau3D {
       return m;
     };
     this.anneauActif = creer();
-    this.anneauxDest = [creer(), creer()];
+    // destinations possibles : voir js/3d/destinations3d.js
   }
 
   /* ---------- Dés ---------- */
@@ -461,15 +461,6 @@ class Plateau3D {
     }));
   }
 
-  montrerDestinations(indices, couleurs) {
-    this.anneauxDest.forEach((a, i) => {
-      if (indices[i] === undefined) { a.visible = false; return; }
-      a.position.copy(this.posCase(indices[i])).add(new THREE.Vector3(0, 0.02, 0));
-      a.material.color.set(couleurs[i] || '#ffffff');
-      a.visible = true;
-    });
-  }
-  cacherDestinations() { this.anneauxDest.forEach((a) => (a.visible = false)); }
 
   /* ---------- Cases Objet et Pouvoir (mode avancé) ---------- */
   /**
@@ -710,7 +701,7 @@ class Plateau3D {
       const s = 1 + 0.12 * Math.sin(temps * 4);
       this.anneauActif.scale.set(s, s, s);
     }
-    for (const a of this.anneauxDest) if (a.visible) a.material.opacity = 0.55 + 0.4 * Math.sin(temps * 6);
+    this._animerDestinations(temps);
     for (const z of Object.values(this.jetons)) if (z.badge) z.badge.position.y = z.badge.userData.y0 + 0.05 + Math.sin(temps * 2) * 0.05;
     this._animerFigures(temps);
     this._animerMarqueursAvance(temps);

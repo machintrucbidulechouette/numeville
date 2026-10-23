@@ -78,3 +78,16 @@ body.pro .fiches-fin { grid-template-columns: repeat(3, 1fr); }
 .salon-joueurs .qui { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .salon-joueurs .icone.renommer, #salon-nom-ok { width: 28px; height: 28px; font-size: 14px; padding: 0; }
 .champ.champ-nom { width: 9.5em; padding: 4px 10px; font-size: 15px; height: 32px; }
+
+/* ---------- cases possibles en évidence (tous les modes) ---------- */
+/* bouton lié à la case survolée sur le plateau */
+.btn.survol-dest { box-shadow: 0 0 0 3px var(--c, #ffd23f), 0 0 24px color-mix(in srgb, var(--c, #ffd23f) 65%, transparent); transform: translateY(-2px); }
+.consigne .astuce-3d { display: block; margin-top: 2px; font-size: 12.5px; color: var(--doux); font-weight: 500; }
+@media (hover: none) { .consigne .astuce-3d { display: none; } }
+/* fenêtre de choix d'une case : fond léger et sans flou, le plateau reste visible et cliquable */
+#modale.choix-case { background: rgba(4, 6, 16, .18); backdrop-filter: none; pointer-events: none; }
+#modale.choix-case .boite { pointer-events: auto; }
+/* grand écran : la fenêtre se pose sur le journal, à droite, pour laisser tout le plateau visible */
+@media (min-width: 1000px) {
+  #modale.choix-case .boite { margin: auto 10px auto auto; width: min(320px, 100%); padding: 18px; }
+}

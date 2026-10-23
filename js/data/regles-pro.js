@@ -51,8 +51,9 @@
   });
 
   const PIOCHES = {
-    fin: { p: { x: -0.85, z: -0.95 }, w: 0.124, h: 0.18 },
-    attaque: { p: { x: 0.85, z: -0.95 }, w: 0.124, h: 0.18 },
+    // posées sur les emplacements du cartouche central (repris du plateau du jeu de base)
+    fin: { p: { x: -0.696, z: -0.95 }, w: 0.124, h: 0.18 },
+    attaque: { p: { x: 0.696, z: -0.95 }, w: 0.124, h: 0.18 },
   };
 
   /* ---------- les 2 nouveaux Complices ---------- */

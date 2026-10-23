@@ -936,7 +936,7 @@ window.NV_QUESTIONS = [
 "id": 58,
 "c": "stalky",
 "lvl": "facile",
-"q": "Àpartir de quel âge un enfant peut-il regarder les écrans ?",
+"q": "À partir de quel âge un enfant peut-il regarder les écrans ?",
 "o": [
 "Dès la naissance, avec des vidéos éducatives",
 "À partir de 2 ans, avec un maximum de 2 heures par jour",
@@ -1435,7 +1435,7 @@ window.NV_QUESTIONS = [
 "id": 89,
 "c": "stalky",
 "lvl": "difficile",
-"q": "Àquoi sert un hashtag (#) ?",
+"q": "À quoi sert un hashtag (#) ?",
 "o": [
 "À mettre en avant l’émotion principale d’un message",
 "À indiquer l’ordre des publications dans un fil de discussion",
@@ -1673,7 +1673,7 @@ window.NV_QUESTIONS = [
 "id": 104,
 "c": "datata",
 "lvl": "facile",
-"q": "Àquoi servent les traceurs cachés, appelés aussi cookies, sur les sites Internet ?",
+"q": "À quoi servent les traceurs cachés, appelés aussi cookies, sur les sites Internet ?",
 "o": [
 "Télécharger et visualiser le contenu de la page",
 "Se souvenir des différentes actions que tu as effectuées sur la page",
@@ -1719,7 +1719,7 @@ window.NV_QUESTIONS = [
 "id": 107,
 "c": "datata",
 "lvl": "facile",
-"q": "Àquelle époque commence-t-on à entendre parler d’intelligence artificielle ?",
+"q": "À quelle époque commence-t-on à entendre parler d’intelligence artificielle ?",
 "o": [
 "Dans les années 1950",
 "Depuis que les smartphones existent",
@@ -2312,7 +2312,7 @@ window.NV_QUESTIONS = [
 "id": 145,
 "c": "datata",
 "lvl": "difficile",
-"q": "Àquoi sert le machine learning ?",
+"q": "À quoi sert le machine learning ?",
 "o": [
 "À permettre à un système d’apprendre automatiquement à partir de données",
 "À augmenter la puissance de calcul d’un ordinateur",
@@ -2583,7 +2583,7 @@ window.NV_QUESTIONS = [
 "id": 163,
 "c": "hacker",
 "lvl": "facile",
-"q": "Àquoi sert le site Internet « Signal Spam » ?",
+"q": "À quoi sert le site Internet « Signal Spam » ?",
 "o": [
 "À accélérer la réception de tes messages",
 "À envoyer des publicités marrantes à tes amis",
@@ -2965,7 +2965,7 @@ window.NV_QUESTIONS = [
 "id": 188,
 "c": "hacker",
 "lvl": "difficile",
-"q": "Àquoi sert la double authentification ?",
+"q": "À quoi sert la double authentification ?",
 "o": [
 "Allumer plus vite son ordinateur",
 "Se connecter plus facilement à une application",
@@ -3131,7 +3131,7 @@ window.NV_QUESTIONS = [
 "id": 199,
 "c": "hacker",
 "lvl": "difficile",
-"q": "Àquoi sert un CAPTCHA sur un site Internet ?",
+"q": "À quoi sert un CAPTCHA sur un site Internet ?",
 "o": [
 "Vérifier que tu es un humain et non un robot",
 "Améliorer la vitesse de chargement du site",

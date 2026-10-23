@@ -379,10 +379,16 @@ class Jeu {
   async avancer(j, n, intro, opt = {}) {
     const ch = { 1: this.chemin(j, n, 1), [-1]: this.chemin(j, n, -1) };
     const dH = ch[1][ch[1].length - 1], dA = ch[-1][ch[-1].length - 1];
-    this.plateau.montrerDestinations([dH, dA], ['#38e1ff', '#ff4fd8']);
-    const dir = await this.ui.action(`${intro} Dans quel sens ${j.nom} avance-t-il ?`, [
-      { label: `↻ Sens horaire → ${this.descCase(dH)}`, valeur: 1, couleur: '#38e1ff' },
-      { label: `↺ Anti-horaire → ${this.descCase(dA)}`, valeur: -1, couleur: '#ff4fd8' },
+    // les deux cases possibles et leurs chemins, bien visibles sur le plateau (clic possible en 3D)
+    const depuis = this.plateau.pions[j.id] ? this.plateau.pions[j.id].position.clone().setY(this.plateau.pions[j.id].userData.sol ?? this.plateau.HAUT) : null;
+    this.plateau.montrerDestinations([
+      { idx: dH, couleur: '#38e1ff', chemin: ch[1], symbole: '↻' },
+      { idx: dA, couleur: '#ff4fd8', chemin: ch[-1], symbole: '↺' },
+    ], { depuis });
+    this.plateau.cadrerDestinations([depuis, this.plateau.posCase(dH), this.plateau.posCase(dA)].filter(Boolean));
+    const dir = await this.ui.action(`${intro} Dans quel sens ${j.nom} avance-t-il ? <small class="astuce-3d">(ou choisis directement la case lumineuse)</small>`, [
+      { label: `↻ Sens horaire → ${this.descCase(dH)}`, valeur: 1, couleur: '#38e1ff', dest: 0 },
+      { label: `↺ Anti-horaire → ${this.descCase(dA)}`, valeur: -1, couleur: '#ff4fd8', dest: 1 },
     ]);
     this.plateau.cacherDestinations();
     const chemin = ch[dir];

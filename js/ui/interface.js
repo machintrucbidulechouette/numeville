@@ -191,6 +191,7 @@ class Interface {
           style: b.couleur ? `--c:${b.couleur}` : false,
           onclick: () => { z.querySelectorAll('button').forEach((x) => (x.disabled = true)); resolve(b.valeur); },
         }, b.label);
+        this._lierDestination(btn, b.dest);
         rangee.appendChild(btn);
       }
       z.appendChild(rangee);
@@ -209,7 +210,38 @@ class Interface {
     this.modale.classList.add('ouverte');
     return boite;
   }
-  fermer() { this.modale.classList.remove('ouverte'); this.modale.innerHTML = ''; }
+  fermer() {
+    this.modale.classList.remove('ouverte', 'choix-case'); this.modale.innerHTML = '';
+    if (this.plateau && this.plateau.surlignerDestination) this.plateau.surlignerDestination(null);
+  }
+
+  /* ---------------- boutons ↔ cases en évidence sur le plateau ---------------- */
+  /** Survoler (ou sélectionner au clavier) un bouton met sa ou ses cases en avant sur le plateau. */
+  _lierDestination(btn, dest) {
+    if (dest === undefined || dest === null) return;
+    btn.dataset.dest = [].concat(dest).join(' ');
+    const on = () => this.plateau && this.plateau.surlignerDestination(dest);
+    const off = () => this.plateau && this.plateau.surlignerDestination(null);
+    btn.addEventListener('mouseenter', on); btn.addEventListener('focus', on);
+    btn.addEventListener('mouseleave', off); btn.addEventListener('blur', off);
+  }
+  _boutonsDestination(k) {
+    return Array.from(document.querySelectorAll('#actions button[data-dest], #modale button[data-dest]'))
+      .filter((b) => b.dataset.dest.split(' ').includes(String(k)));
+  }
+  /** Survol d'une case en 3D : le bouton correspondant s'allume. */
+  marquerDestination(k) {
+    document.querySelectorAll('button.survol-dest').forEach((b) => b.classList.remove('survol-dest'));
+    if (k !== null && k !== undefined) this._boutonsDestination(k).forEach((b) => b.classList.add('survol-dest'));
+  }
+  /** Clic sur une case en 3D = clic sur son bouton (même chemin qu'un vrai clic, donc aussi en ligne). */
+  cliquerDestination(k, idx) {
+    const b = this._boutonsDestination(k).find((x) => !x.disabled);
+    if (!b) return false;
+    this.caseCliquee = idx;   // permet d'enchaîner « quartier » puis « case » en un seul clic sur le plateau
+    b.click();
+    return true;
+  }
 
   /** @param {{caseAvance:'objet'|'pouvoir'}} [info] case à expliquer (bouton « En savoir plus ») */
   choisir(titre, texte, options, info) {
@@ -217,12 +249,18 @@ class Interface {
       const c = el('div', {}, `<h2>${titre}</h2><p>${texte}</p>`);
       if (info && info.caseAvance) c.appendChild(this._boutonSavoirPlus(() => this.montrerCaseInfo(info.caseAvance)));
       const liste = el('div', { class: 'choix' });
-      options.forEach((o, i) => liste.appendChild(el('button', {
-        class: `btn option ${i === 0 ? 'principal' : ''}`, disabled: !!o.desactive,
-        onclick: () => { this.fermer(); resolve(o.valeur); },
-      }, o.label)));
+      options.forEach((o, i) => {
+        const b = el('button', {
+          class: `btn option ${i === 0 ? 'principal' : ''}`, disabled: !!o.desactive,
+          onclick: () => { this.fermer(); resolve(o.valeur); },
+        }, o.label);
+        this._lierDestination(b, o.dest);
+        liste.appendChild(b);
+      });
       c.appendChild(liste);
       this.ouvrir(c, 'petite');
+      // choix d'une case : fenêtre plus discrète pour voir les cases en évidence sur le plateau
+      this.modale.classList.toggle('choix-case', options.some((o) => o.dest !== undefined));
     });
   }
 
@@ -605,7 +643,7 @@ class Interface {
       <p><b>Numéville</b> est un jeu coopératif : 2 à 4 Éclaireurs du Numérique répondent à des questions pour ramener à la raison les 4 Complices du Dark Master.</p>
       <div class="cols">
         <section><h3>Tour de jeu</h3><ol>
-          <li><b>Dé blanc</b> : avance du nombre exact de cases, dans le sens de ton choix. Si la case d’arrivée est occupée, va à la prochaine case libre. La case indique le quartier (donc le Complice).</li>
+          <li><b>Dé blanc</b> : avance du nombre exact de cases, dans le sens de ton choix. Les deux cases possibles s’allument sur le plateau, avec leur chemin : clique le bouton ou directement la case. Si la case d’arrivée est occupée, va à la prochaine case libre. La case indique le quartier (donc le Complice).</li>
           <li><b>Dé noir</b> : 1-2-3 = question facile · 4-5 = question difficile · 6 = question difficile puis carte « Dark Master – Attaque ».</li>
           <li><b>Bonne réponse</b> = 1 jeton bleu (bonne pratique) · <b>mauvaise réponse</b> = 1 jeton rouge (mauvaise pratique) sur la fiche du Complice.</li>
         </ol></section>

@@ -181,6 +181,7 @@
     }
     window.__plateau = plateau;
     ui.plateau = plateau;
+    plateau.ui = ui;
 
     // Cinématiques : activées par défaut (sauf si le système demande moins d'animations)
     const bCine = document.querySelector('#btn-cine');

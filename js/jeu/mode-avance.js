@@ -51,8 +51,15 @@ class ModeAvance {
     if (c.type === 'place') return 'La Place';
     if (c.type === 'face') return `Portrait de ${this.nomC(c.c)} (face-à-face)`;
     if (c.malus) return `Quartier de ${this.nomC(c.c)} — case malus`;
-    const rang = NV.BOUCLE.filter((b, i) => b.c === c.c && b.type === 'case' && i <= idx).length;
-    return `Quartier de ${this.nomC(c.c)} — case ${rang}`;
+    return `Quartier de ${this.nomC(c.c)} — case ${this.rangCase(idx)}`;
+  }
+  /** Numéro de la case dans son quartier (même numérotation que libelleCase) ; symbole court sinon. */
+  rangCase(idx) {
+    const c = NV.BOUCLE[idx];
+    if (c.type === 'place') return '★';
+    if (c.type === 'face') return '◉';
+    if (c.malus) return '!';
+    return NV.BOUCLE.filter((b, i) => b.c === c.c && b.type === 'case' && i <= idx).length;
   }
 
   /**
@@ -68,14 +75,30 @@ class ModeAvance {
       if (!g) groupes.push(g = { cle, cases: [] });
       g.cases.push(i);
     }
-    const options = groupes.map((g) => ({ label: g.cle === 'place' ? '🔀 La Place' : `Quartier de ${this.nomC(g.cle)}`, valeur: g.cle }));
-    if (hasard) options.push({ label: '🎲 Au hasard', valeur: '__hasard' });
-    const info = aide ? { caseAvance: aide } : undefined;
-    const g = await this.ui.choisir(titre, texte, options, info);
-    if (g === '__hasard') return indices[Math.floor(NV_alea() * indices.length)];
-    const cases = groupes.find((x) => x.cle === g).cases;
-    if (cases.length === 1) return cases[0];
-    return this.ui.choisir(titre, 'Sur quelle case ?', cases.map((i) => ({ label: this.libelleCase(i), valeur: i })), info);
+    // toutes les cases possibles s'allument sur le plateau ; un bouton de quartier met ses cases en avant
+    const couleurCase = (i) => { const c = NV.BOUCLE[i]; return c.type === 'place' ? '#ffd23f' : NV.COMPLICES[c.c].couleurClaire; };
+    this.plateau.montrerDestinations(indices.map((i) => ({ idx: i, couleur: couleurCase(i), symbole: aide === 'objet' ? '🧰' : aide === 'pouvoir' ? '⚡' : '★' })));
+    const k = (i) => indices.indexOf(i);
+    this.ui.caseCliquee = null;
+    try {
+      const options = groupes.map((g) => ({ label: g.cle === 'place' ? '🔀 La Place' : `Quartier de ${this.nomC(g.cle)}`, valeur: g.cle, dest: g.cases.map(k) }));
+      if (hasard) options.push({ label: '🎲 Au hasard', valeur: '__hasard' });
+      const info = aide ? { caseAvance: aide } : undefined;
+      const g = await this.ui.choisir(titre, texte, options, info);
+      if (g === '__hasard') return indices[Math.floor(NV_alea() * indices.length)];
+      const cases = groupes.find((x) => x.cle === g).cases;
+      if (cases.length === 1) return cases[0];
+      // 2e étape : seules les cases du quartier choisi restent allumées
+      this.plateau.montrerDestinations(cases.map((i) => ({ idx: i, couleur: couleurCase(i), symbole: String(this.rangCase(i)) })));
+      const p = this.ui.choisir(titre, 'Sur quelle case ?', cases.map((i, n) => ({ label: this.libelleCase(i), valeur: i, dest: n })), info);
+      // case choisie directement sur le plateau : la 2e étape se valide toute seule
+      const cliquee = this.ui.caseCliquee;
+      if (cliquee !== null && cliquee !== undefined && cases.includes(cliquee)) setTimeout(() => this.ui.cliquerDestination(cases.indexOf(cliquee), cliquee), 0);
+      return await p;
+    } finally {
+      this.ui.caseCliquee = null;
+      this.plateau.cacherDestinations();
+    }
   }
 
   quartiersActifsOuTous() { return NV.ORDRE_COMPLICES; }
