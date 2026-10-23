@@ -1,7 +1,7 @@
 /* =====================================================================
    Numéville 3D — cases où l'on peut aller (tous les modes)
    Pendant un choix de case (sens du déplacement, téléportation, case Objet / Pouvoir) :
-   • chaque case possible reçoit un fin liseré lumineux sur son bord et une petite balise
+   • chaque case possible reçoit un liseré lumineux (avec un léger halo) sur son bord et une petite balise
      (↻ / ↺ ou ★) qui reste visible au-dessus des pions ;
    • de petites flèches défilent sur le chemin que suivra le pion ;
    • le reste du plateau s'assombrit très légèrement ;
@@ -17,7 +17,8 @@ class Destinations3D {
     D.groupe = new THREE.Group();
     this.scene.add(D.groupe);
     D.geoDisque = new THREE.CircleGeometry(1, 48);
-    D.geoAnneau = new THREE.RingGeometry(1.0, 1.09, 48);
+    D.geoAnneau = new THREE.RingGeometry(1.0, 1.14, 48);
+    D.geoHalo = new THREE.RingGeometry(0.94, 1.32, 48);
     D.geoCible = new THREE.CylinderGeometry(1.35, 1.35, 1, 16);
     D.geoCible.translate(0, 0.5, 0);
     const chevron = new THREE.Shape();
@@ -69,6 +70,9 @@ class Destinations3D {
       disque.material.opacity = 0;
       const anneau = new THREE.Mesh(D.geoAnneau, base(new THREE.MeshBasicMaterial({ color: couleur, opacity: 0.95, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -4 })));
       anneau.rotation.x = -Math.PI / 2; anneau.position.y = 0.016; anneau.scale.setScalar(r);
+      // halo lumineux autour du trait (rendu additif : le trait paraît éclairé)
+      const halo = new THREE.Mesh(D.geoHalo, base(new THREE.MeshBasicMaterial({ color: couleur, opacity: 0.4, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, polygonOffset: true, polygonOffsetFactor: -4 })));
+      halo.rotation.x = -Math.PI / 2; halo.position.y = 0.014; halo.scale.setScalar(r);
       const hauteur = this.pro ? 1.6 : 1.1;   // zone de clic au-dessus de la case
       const balise = new THREE.Sprite(base(new THREE.SpriteMaterial({ map: this._baliseTexture(couleur, d.symbole || '★'), depthTest: false })));
       const tb = this.pro ? 0.4 : 0.32;
@@ -78,7 +82,7 @@ class Destinations3D {
       const cible = new THREE.Mesh(D.geoCible, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false }));
       cible.scale.set(r, hauteur, r);
       cible.userData.k = k;
-      g.add(disque, anneau, balise, cible);
+      g.add(disque, halo, anneau, balise, cible);
       D.groupe.add(g);
       // petites flèches sur le chemin (entre les cases, et sur les cases traversées)
       const chevrons = [];
@@ -100,7 +104,7 @@ class Destinations3D {
           }
         }
       }
-      D.liste.push({ k, idx: d.idx, groupe: g, disque, anneau, balise, cible, chevrons, r, tb });
+      D.liste.push({ k, idx: d.idx, groupe: g, disque, anneau, halo, balise, cible, chevrons, r, tb });
     });
     D.actif = dests.length > 0;
     D.survol = null;
@@ -151,7 +155,9 @@ class Destinations3D {
       const fort = D.survol && D.survol.includes(o.k);
       const respire = calme ? 1 : 1 + 0.025 * Math.sin(temps * 4);
       o.anneau.scale.setScalar(o.r * respire * (fort ? 1.05 : 1));
-      o.anneau.material.opacity = enAvant ? 0.9 : 0.25;
+      o.anneau.material.opacity = enAvant ? 1 : 0.3;
+      o.halo.scale.setScalar(o.r * respire * (fort ? 1.05 : 1));
+      o.halo.material.opacity = fort ? 0.6 : enAvant ? 0.4 : 0.08;
       o.disque.material.opacity = fort ? 0.12 : 0;
       o.balise.material.opacity = enAvant ? 1 : 0.3;
       const s = fort ? 1.12 : 1;
