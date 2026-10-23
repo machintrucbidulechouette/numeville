@@ -42,7 +42,7 @@ class CartesDarkMaster {
       if (this.piocheFin.length === 0) {
         await this.retourVue();
         const s = this.compte('sauve');
-        this.fin = { type: s >= 3 ? (s === 4 ? 'totale' : 'victoire') : 'defaite', raison: 'La pioche « Fin de manche » est épuisée.' };
+        this.fin = { type: s >= NV.FIN.victoire ? (s === NV.FIN.totale ? 'totale' : 'victoire') : 'defaite', raison: 'La pioche « Fin de manche » est épuisée.' };
         return;
       }
       const carte = this.piocheFin.pop();
@@ -68,6 +68,11 @@ class CartesDarkMaster {
       case 'fuite': return this.estActif('datata');
       case 'obsolescence': return this.estActif('hyperco');
       case 'surconso': case 'campagne': return this.actifs().length > 0;
+      // mode Pro
+      case 'scrollinfini': return this.estActif('scrollo') || this.estActif('stalky');
+      case 'zoneblanche': return this.estActif('fracturo');
+      case 'sansecran': return this.estActif('scrollo') || this.estActif('hyperco');
+      case 'mediatheque': return this.actifs().length > 0;
       default: return true; // nuit blanche, brouillard, mobilisation
     }
   }
@@ -82,6 +87,10 @@ class CartesDarkMaster {
       case 'stress': return this.estActif(ctx.quartier);
       case 'partage': return this.estActif('datata') || this.estActif('stalky');
       case 'crash': return this.estActif('hacker') || this.estActif(this.quartierCible(ctx));
+      // mode Pro
+      case 'autoplay': case 'notifnuit': return this.estActif('scrollo');
+      case 'formulaire': return this.estActif('fracturo');
+      case 'abandon': return this.estActif('fracturo') || this.estActif(this.quartierCible(ctx));
       default: return this.actifs().length > 0; // influence, bug, trolls, notification, piège à clics
     }
   }
@@ -153,6 +162,29 @@ class CartesDarkMaster {
         for (const id of cibles) await this.retirer(id, 'rouge', 1, c.titre);
         break;
       }
+      /* ---- cartes du mode Pro ---- */
+      case 'scrollinfini':
+        for (const id of ['scrollo', 'stalky']) await this.ajouter(id, 'rouge', 1, c.titre);
+        break;
+      case 'zoneblanche': {
+        await this.ajouter('fracturo', 'rouge', 1, c.titre);
+        const choix = this.actifs((e, id) => id !== 'fracturo' && e.bleus > 0);
+        if (!choix.length || this.fin) { ui.log('Aucun autre Complice n’a de bonne pratique à perdre.'); break; }
+        const id = await ui.choisirComplice(c.titre, 'Choisissez un autre Complice : il perd 1 jeton bonne pratique.', choix, this);
+        await this.retirer(id, 'bleu', 1, c.titre);
+        break;
+      }
+      case 'sansecran': {
+        const cibles = ['scrollo', 'hyperco'].filter((id) => this.estActif(id) && this.complices[id].rouges > 0);
+        if (!cibles.length) ui.log('Ni Scrollo ni Hyperco n’ont de mauvaise pratique : sans effet.');
+        for (const id of cibles) await this.retirer(id, 'rouge', 1, c.titre);
+        break;
+      }
+      case 'mediatheque': {
+        const id = await ui.choisirComplice(c.titre, 'Quel Complice profite de l’atelier ? (Fracturo en reçoit 2.)', this.actifs(), this);
+        await this.ajouter(id, 'bleu', id === 'fracturo' ? 2 : 1, c.titre);
+        break;
+      }
       case 'campagne': {
         const id = await ui.choisirComplice(c.titre, 'Choisissez le Complice qui profite de la campagne éducative.', this.actifs(), this);
         const peutRetirer = this.complices[id].rouges > 0;
@@ -168,7 +200,7 @@ class CartesDarkMaster {
 
   async effetAttaque(c, ctx) {
     const ui = this.ui, j = ctx.joueur;
-    const simple = { rumeur: 'stalky', motdepasse: 'hacker', cleusb: 'hacker', revendues: 'datata', promo: 'hyperco' };
+    const simple = { rumeur: 'stalky', motdepasse: 'hacker', cleusb: 'hacker', revendues: 'datata', promo: 'hyperco', autoplay: 'scrollo', formulaire: 'fracturo' };
     if (simple[c.id]) { await this.ajouter(simple[c.id], 'rouge', 1, c.titre); return; }
     switch (c.id) {
       case 'messagepiege':
@@ -234,6 +266,22 @@ class CartesDarkMaster {
         if (options.every((o) => o.desactive)) options.forEach((o) => (o.desactive = false));
         const v = await ui.choisir(c.titre, `${j.nom} doit choisir :`, options);
         if (v === 'hacker') await this.retirer('hacker', 'bleu', 1, c.titre); else await this.ajouter(q, 'rouge', 1, c.titre);
+        break;
+      }
+      /* ---- attaques du mode Pro ---- */
+      case 'notifnuit':
+        await this.ajouter('scrollo', 'rouge', 1, c.titre);
+        j.piegeClics = true;
+        ui.log(`🌙 Au prochain tour de ${this.tagJ(j)}, un 1-2-3 au dé noir donnera une question difficile.`);
+        break;
+      case 'abandon': {
+        const q = this.quartierCible(ctx);
+        const options = [];
+        if (this.estActif('fracturo')) options.push({ label: '🔵 Retirer 1 bonne pratique à Fracturo', valeur: 'fracturo', desactive: this.complices.fracturo.bleus === 0 });
+        if (this.estActif(q)) options.push({ label: `🔴 Ajouter 1 mauvaise pratique à ${this.nomC(q)} (ton quartier)`, valeur: 'quartier' });
+        if (options.every((o) => o.desactive)) options.forEach((o) => (o.desactive = false));
+        const v = await ui.choisir(c.titre, `${j.nom} doit choisir :`, options);
+        if (v === 'fracturo') await this.retirer('fracturo', 'bleu', 1, c.titre); else await this.ajouter(q, 'rouge', 1, c.titre);
         break;
       }
       case 'consoexpress': {

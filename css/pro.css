@@ -1,0 +1,80 @@
+/* =====================================================================
+   Numéville 3D — mode Pro et nouveautés communes
+   Choix du mode de jeu, pop-up « C'est ton tour », 6 fiches compactes,
+   renommage dans le salon, cases malus.
+   ===================================================================== */
+
+:root { --scrollo: #5b3df5; --fracturo: #b8733a; }
+.tag-scrollo { color: #a493ff; } .tag-fracturo { color: #e8ad74; }
+
+/* ---------- choix du mode de jeu (accueil et salon) ---------- */
+.segment.modes-jeu { display: flex; width: 100%; }
+.segment.modes-jeu button { flex: 1; padding: 8px 10px; text-align: center; }
+.segment.modes-jeu button.bouton-pro:not(.choisi) { color: #ffd98a; }
+.segment.modes-jeu button.bouton-pro.choisi { background: linear-gradient(135deg, #ffcf5a, #ff6fbf 55%, #a99bff); }
+.desc-mode { margin: 8px 2px 0; font-size: 13px; color: var(--doux); line-height: 1.4; min-height: 1.4em; }
+#salon-jeu + .desc-mode { margin-bottom: 10px; }
+
+/* ---------- « C'est ton tour » ---------- */
+#tour-pop {
+  position: fixed; inset: 0; z-index: 30; display: none; place-items: center;
+  pointer-events: none;
+}
+#tour-pop.visible { display: grid; }
+#tour-pop .tp-boite {
+  --c: #38e1ff;
+  position: relative; pointer-events: auto; cursor: pointer;
+  display: flex; align-items: center; gap: 16px;
+  padding: 16px 28px 16px 16px; border-radius: 22px;
+  background: rgba(10, 14, 34, .92); border: 2px solid var(--c);
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--c) 18%, transparent), 0 18px 60px rgba(0,0,0,.6), 0 0 60px color-mix(in srgb, var(--c) 45%, transparent);
+  animation: tp-entree .5s cubic-bezier(.2, 1.4, .4, 1) both;
+}
+#tour-pop.sortie .tp-boite { animation: tp-sortie .35s ease-in both; }
+#tour-pop img { width: 84px; height: 84px; border-radius: 50%; object-fit: cover; object-position: 50% 8%; border: 3px solid var(--c); background: #0a0f26; }
+#tour-pop .tp-texte { display: grid; gap: 2px; }
+#tour-pop small { font-size: 13px; color: var(--doux); letter-spacing: .5px; text-transform: uppercase; }
+#tour-pop b { font-family: var(--titre); font-size: 34px; line-height: 1.05; color: #ffffff; text-shadow: 0 0 18px color-mix(in srgb, var(--c) 70%, transparent); }
+#tour-pop .tp-halo { position: absolute; inset: -2px; border-radius: inherit; border: 2px solid var(--c); animation: tp-halo 1.2s ease-out .25s both; pointer-events: none; }
+@keyframes tp-entree { from { opacity: 0; transform: scale(.6) translateY(16px); } to { opacity: 1; transform: none; } }
+@keyframes tp-sortie { to { opacity: 0; transform: scale(.92) translateY(-10px); } }
+@keyframes tp-halo { from { opacity: .9; transform: scale(1); } to { opacity: 0; transform: scale(1.25, 1.5); } }
+body.cinema #tour-pop { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  #tour-pop .tp-boite, #tour-pop.sortie .tp-boite { animation: tp-fondu .3s both; }
+  #tour-pop.sortie .tp-boite { animation-direction: reverse; }
+  #tour-pop .tp-halo { display: none; }
+  @keyframes tp-fondu { from { opacity: 0; } to { opacity: 1; } }
+}
+@media (max-width: 720px) {
+  #tour-pop .tp-boite { gap: 12px; padding: 12px 18px 12px 12px; }
+  #tour-pop img { width: 62px; height: 62px; }
+  #tour-pop b { font-size: 25px; }
+}
+
+/* ---------- mode Pro : 6 fiches de Complices plus compactes (nom et pastilles sur une ligne) ---------- */
+body.pro #fiches { gap: 5px; width: 236px; max-height: calc(100% - var(--hud-h, 68px) - var(--actions-h, 120px) - 30px); overflow-y: auto; scrollbar-width: thin; }
+body.pro .fiche { padding: 5px 8px; display: grid; grid-template-columns: auto 1fr; column-gap: 8px; align-items: center; }
+body.pro .fiche-tete { display: contents; }
+body.pro .fiche-tete > div:not(.fiche-portrait) { grid-column: 2; grid-row: 1; }
+body.pro .fiche-portrait { width: 38px; height: 38px; grid-column: 1; grid-row: 1 / span 2; }
+body.pro .fiche h3 { font-size: 16px; }
+body.pro .fiche p { display: none; }
+body.pro .pistes { grid-column: 2; margin-top: 3px; gap: 2px; }
+body.pro .pastille { width: 13px; height: 13px; border-width: 1.5px; }
+body.pro .fiche .statut { grid-column: 2; margin-top: 2px; font-size: 13px; }
+@media (max-width: 720px) {
+  body.pro #fiches { flex-wrap: wrap; width: auto; max-height: none; overflow: visible; }
+  body.pro .fiche { flex: 1 1 calc(33% - 4px); display: block; }
+  body.pro .fiche-tete { display: flex; }
+}
+body.pro .fiches-fin { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 720px) { body.pro .fiches-fin { grid-template-columns: repeat(2, 1fr); } }
+
+/* ---------- cases malus ---------- */
+.carte-rappel.malus { border-left-color: #ff3a44; color: #ffd6d9; }
+
+/* ---------- salon : changer de prénom ---------- */
+.salon-joueurs .qui { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.salon-joueurs .icone.renommer, #salon-nom-ok { width: 28px; height: 28px; font-size: 14px; padding: 0; }
+.champ.champ-nom { width: 9.5em; padding: 4px 10px; font-size: 15px; height: 32px; }

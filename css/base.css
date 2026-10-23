@@ -14,6 +14,8 @@
   --bleu: #3d7bff;
   --rouge: #ff3a44;
   --accent: #38e1ff;
+  --c-objet: #e9eef6;   /* cases et cartes Objet : argent (forme hexagonale, pointillés) */
+  --c-pouvoir: #d9b23c; /* cases et cartes Pouvoir : or (étoile) */
   --stalky: #e6007e;
   --hacker: #1aa3e8;
   --hyperco: #3daa35;

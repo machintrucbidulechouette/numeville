@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="css/son.css">
   <link rel="stylesheet" href="css/avance.css">
   <link rel="stylesheet" href="css/en-ligne.css">
+  <link rel="stylesheet" href="css/pro.css">
   <link rel="stylesheet" href="css/adaptatif.css">
 
   <!-- Three.js r184 (dernière version stable, avril 2026), module ES chargé depuis un CDN
@@ -111,11 +112,12 @@
 
       <div class="reglage">
         <h2>Mode de jeu</h2>
-        <label class="interrupteur" for="mode-avance">
-          <input type="checkbox" id="mode-avance">
-          <span class="glissiere" aria-hidden="true"></span>
-          <span class="interrupteur-texte"><b>Mode avancé</b> : cartes Objet et Pouvoir sur deux cases du plateau.<small>Se joue en niveau Standard ou Expert.</small></span>
-        </label>
+        <div id="modes-jeu" class="segment niveaux modes-jeu" role="group" aria-label="Mode de jeu">
+          <button type="button" data-jeu="base" class="choisi" aria-pressed="true">Classique<small>Le jeu de plateau</small></button>
+          <button type="button" data-jeu="avance" aria-pressed="false">Avancé<small>Objets et Pouvoirs</small></button>
+          <button type="button" data-jeu="pro" aria-pressed="false" class="bouton-pro">Pro<small>Grand plateau · 6 Complices</small></button>
+        </div>
+        <p id="desc-mode" class="desc-mode"></p>
       </div>
       </div>
 
@@ -192,6 +194,9 @@
   <!-- Données du jeu -->
   <script src="js/data/regles.js"></script>
   <script src="js/data/cartes-avancees.js"></script>
+  <script src="js/data/regles-pro.js"></script>
+  <script src="js/data/questions-pro.js"></script>
+  <script src="js/data/textures-pro.js"></script>
   <script src="js/data/questions.js"></script>
   <script src="js/data/textures.js"></script>
   <script src="js/data/board-texture.js"></script>
@@ -205,10 +210,13 @@
   <script src="js/3d/complices3d.js"></script>
   <script src="js/3d/effets3d.js"></script>
   <script src="js/3d/cinematiques.js"></script>
+  <script src="js/3d/plateau-pro3d.js"></script>
+  <script src="js/3d/cinematiques-pro.js"></script>
   <!-- Règles : cœur, cartes Dark Master, mode avancé -->
   <script src="js/jeu/jeu.js"></script>
   <script src="js/jeu/cartes-dark-master.js"></script>
   <script src="js/jeu/mode-avance.js"></script>
+  <script src="js/jeu/mode-pro.js"></script>
   <!-- Interface et démarrage -->
   <script src="js/ui/interface.js"></script>
   <script src="js/ui/main.js"></script>

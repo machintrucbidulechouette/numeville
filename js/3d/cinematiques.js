@@ -105,10 +105,10 @@ class Cinematiques3D {
     const lum = c._lumiere;
     if (statut === 'sauve') {
       // sobre : une onde douce au sol, quelques paillettes qui montent lentement, la lumière du quartier qui s'éclaire
-      const sol = fig.clone().setY(this.HAUT);
+      const sol = this.posFigure(id, 0);
       setTimeout(() => {
         this._onde(sol, c.couleurClaire, 1600, 0);
-        this.particules(sol.clone().setY(this.HAUT + 0.2), [c.couleurClaire, '#ffffff'], 'paillettes', 2600);
+        this.particules(sol.clone().setY(sol.y + 0.2), [c.couleurClaire, '#ffffff'], 'paillettes', 2600);
       }, 250);
       const i0 = lum.intensity;
       this.animer(2200, (t) => { lum.intensity = i0 + Math.sin(t * Math.PI) * 14; }, true).then(() => { lum.intensity = i0; });
@@ -118,7 +118,7 @@ class Cinematiques3D {
         this.camera.position.lerpVectors(p0, cible, Plateau3D.ease(t) * 0.12);
       }, true));
     } else {
-      this.particules(fig.clone().setY(this.HAUT + 0.1), ['#1a0a10', '#3a0b18', '#55101f'], 'fumee', 2600);
+      this.particules(this.posFigure(id, 0.1), ['#1a0a10', '#3a0b18', '#55101f'], 'fumee', 2600);
       const i0 = lum.intensity;
       this.animer(1600, (t) => { lum.intensity = i0 * (Math.random() > 0.3 ? 1 - t * 0.8 : 0.1); lum.color.set(t > 0.5 ? '#ff2a3a' : c.couleur); }, true);
     }
@@ -250,7 +250,7 @@ class Cinematiques3D {
       const m = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.5, 64),
         new THREE.MeshBasicMaterial({ color: couleur, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }));
       m.rotation.x = -Math.PI / 2;
-      m.position.set(centre.x, this.HAUT + 0.012, centre.z);
+      m.position.set(centre.x, Math.max(this.HAUT, centre.y || 0) + 0.012, centre.z);
       this.scene.add(m);
       this.animer(duree, (t) => { m.scale.setScalar(1 + Plateau3D.easeOut(t) * 9); m.material.opacity = 0.9 * (1 - t); })
         .then(() => { this.scene.remove(m); m.geometry.dispose(); m.material.dispose(); });
@@ -387,7 +387,8 @@ class Cinematiques3D {
     const c = NV.COMPLICES[id];
     const lum = c._lumiere, i0 = lum.intensity;
     this.animer(1600, (t) => { lum.intensity = i0 + Math.sin(t * Math.PI) * 10; }, true);
-    const milieu = pion.position.clone().lerp(this.posFigure(id, 0.6), 0.5).setY(this.HAUT + 0.55);
+    const milieu = pion.position.clone().lerp(this.posFigure(id, 0.6), 0.5);
+    milieu.y = (pion.userData.sol ?? this.HAUT) / 2 + this.posFigure(id, 0).y / 2 + 0.55;
     await this.plan(milieu, 2.5, 1.7, 1100);
     await this.attendre(700);
   }

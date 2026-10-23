@@ -50,6 +50,46 @@ class Interface {
     });
   }
 
+  /** Mode Pro : 6 fiches de Complices, plus compactes. */
+  activerPro() {
+    document.body.classList.add('pro');
+    this._prec = {};
+    this._construireFiches();
+  }
+
+  /* ---------------- « C'est ton tour » ---------------- */
+  /**
+   * Fenêtre éclair au centre de l'écran au début de chaque tour, aux couleurs de l'Éclaireur.
+   * Elle se ferme seule (ou d'un clic) et ne bloque jamais la partie.
+   * En ligne, NV_monTour(place) dit si ce navigateur joue ce joueur : « C'est ton tour ! » ou « C'est au tour de … ».
+   */
+  annoncerTour(j) {
+    if (window.NV_RATTRAPAGE || (this.plateau && this.plateau.vitesse > 1)) return;
+    const e = NV.ECLAIREURS[j.eclaireur];
+    const enLigne = typeof window.NV_monTour === 'function';
+    const moi = enLigne ? window.NV_monTour(j.id) : true;
+    let pop = $('#tour-pop');
+    if (!pop) {
+      pop = el('div', { id: 'tour-pop', role: 'status', 'aria-live': 'assertive' });
+      pop.addEventListener('click', () => this._fermerTour());
+      document.body.appendChild(pop);
+    }
+    clearTimeout(this._minuteurTour);
+    pop.style.setProperty('--c', e.couleur);
+    const titre = enLigne ? (moi ? 'C’est ton tour !' : `C’est au tour de ${j.nom}`) : 'C’est ton tour !';
+    pop.innerHTML = `<div class="tp-boite"><div class="tp-halo"></div><img src="${IMG}eclaireur-${e.id}.jpg" alt=""><div class="tp-texte"><small>${enLigne && !moi ? e.nom : `${j.nom} · ${e.nom}`}</small><b>${titre}</b></div></div>`;
+    pop.classList.remove('visible', 'sortie'); void pop.offsetWidth;
+    pop.classList.add('visible');
+    if (window.NV_AUDIO) NV_AUDIO.effet('tour', { moi });
+    this._minuteurTour = setTimeout(() => this._fermerTour(), 1900);
+  }
+  _fermerTour() {
+    const pop = $('#tour-pop');
+    if (!pop || !pop.classList.contains('visible')) return;
+    pop.classList.add('sortie');
+    setTimeout(() => pop.classList.remove('visible', 'sortie'), 350);
+  }
+
   /* ---------------- fiches Complices (panneau gauche) ---------------- */
   _construireFiches() {
     const zone = $('#fiches');
@@ -282,7 +322,7 @@ class Interface {
             <small>La bonne réponse était ${LETTRES[q.a]}.${gain > 1 ? ' Face-à-face : le résultat compte double.' : ''}</small>
           </div>
           <details class="explication" open>
-            <summary>Le mot du livret maître du jeu</summary>
+            <summary>${q.pro ? 'Pour en savoir plus' : 'Le mot du livret maître du jeu'}</summary>
             <p>${q.e}</p>
             ${sources ? `<ul class="sources">${sources}</ul>` : ''}
           </details>`;
@@ -528,8 +568,8 @@ class Interface {
       const s = jeu.compte('sauve'), p = jeu.compte('perdu');
       const titres = { totale: 'Victoire totale !', victoire: 'Victoire !', defaite: 'Défaite…' };
       const textes = {
-        totale: 'Les 4 Complices sont sauvés : Numéville est libérée de l’emprise du Dark Master !',
-        victoire: 'Vous avez sauvé au moins 3 Complices : Numéville résiste au Dark Master.',
+        totale: `Les ${NV.FIN.totale} Complices sont sauvés : Numéville est libérée de l’emprise du Dark Master !`,
+        victoire: `Vous avez sauvé au moins ${NV.FIN.victoire} Complices : Numéville résiste au Dark Master.`,
         defaite: 'Le Dark Master garde le contrôle de Numéville. Retentez votre chance, éclaireurs !',
       };
       const stats = jeu.joueurs.map((j) => {
@@ -580,6 +620,13 @@ class Interface {
           <li><b>Objet</b> : effet ponctuel, usage unique. <b>Pouvoir</b> : permanent ou à quelques utilisations.</li>
           <li>Maximum 1 Objet et 1 Pouvoir en main : si on en pioche un autre, on choisit lequel garder.</li>
           <li>Le jeu propose chaque carte au bon moment ; clique sur une carte en bas de l’écran pour relire son texte.</li>
+        </ul></section>
+        <section><h3>Mode Pro</h3><ul>
+          <li>Grand plateau en 3D : 25 cases sur trois niveaux reliés par des escaliers, <b>6 Complices</b> (avec Scrollo et Fracturo).</li>
+          <li>Comprend le mode avancé, plus l’objet <b>Jetpack</b> 🚀 : après le dé blanc, avance de 3 cases de plus en survolant le plateau.</li>
+          <li><b>Toboggan à pop-ups</b> 📉 : finir dessus fait redescendre de 3 cases (sans piocher de carte sur la case d’arrivée).</li>
+          <li><b>Batterie à plat</b> 🪫 : on perd son Objet ; sans Objet, le Complice du quartier reçoit 1 jeton mauvaise pratique.</li>
+          <li>Fin : 6 sauvés = victoire totale, au moins 4 = victoire, 3 perdus = défaite.</li>
         </ul></section>
         <section><h3>Fin de partie</h3><ul>
           <li>4 Complices sauvés : victoire totale.</li>

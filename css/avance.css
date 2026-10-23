@@ -24,15 +24,15 @@
 .main-titre { font-size: 12px; color: var(--doux); text-transform: uppercase; letter-spacing: 1px; padding: 4px 10px; border-radius: 999px; background: var(--panneau); border: 1px solid var(--bord); }
 .puce-carte { border-radius: 999px; padding: 6px 14px; font-size: 13.5px; font-weight: 600; color: var(--texte); background: var(--panneau-plein); border: 1px solid; box-shadow: 0 6px 18px rgba(0,0,0,.4); }
 .puce-carte small { font-weight: 500; color: var(--doux); margin-left: 4px; }
-.puce-carte.objet { border-color: #38e1ff; }
-.puce-carte.pouvoir { border-color: #b98cff; }
+.puce-carte.objet { border-color: var(--c-objet); border-style: dashed; }
+.puce-carte.pouvoir { border-color: var(--c-pouvoir); }
 .puce-carte:hover, .puce-carte:focus-visible { background: #18214a; color: #ffffff; }
 body.cinema #main-joueur { opacity: 0; pointer-events: none; }
 .mini i.cartes { right: auto; left: -6px; }
 
 /* cartes Objet et Pouvoir (même gabarit que les cartes Dark Master) */
-.carte-dm.objet .dm-face header { background: linear-gradient(#0b0b10, #06364a); }
-.carte-dm.pouvoir .dm-face header { background: linear-gradient(#0b0b10, #2c1458); }
+.carte-dm.objet .dm-face header { background: linear-gradient(#0b0b10, #3a4150); }
+.carte-dm.pouvoir .dm-face header { background: linear-gradient(#0b0b10, #4d3a08); }
 /* nombre d'utilisations : violet foncé sur la carte blanche, violet clair sur fond sombre */
 .boite .usage { color: #c9bcff !important; font-weight: 600; font-size: 13px !important; }
 .boite .dm-face .usage { color: #4b3b8f !important; }
@@ -56,8 +56,8 @@ body.cinema #main-joueur { opacity: 0; pointer-events: none; }
 
 .fiche-carte .fc-type { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--doux) !important; }
 .fiche-carte h2 { margin: 2px 0 10px; }
-.fiche-carte blockquote { margin: 0 0 14px; padding: 10px 14px; border-radius: 10px; background: #0a0f26; border-left: 3px solid #38e1ff; color: #d7dcf3; font-size: 14px; line-height: 1.5; }
-.fiche-carte.pouvoir blockquote { border-left-color: #b98cff; }
+.fiche-carte blockquote { margin: 0 0 14px; padding: 10px 14px; border-radius: 10px; background: #0a0f26; border-left: 3px dashed var(--c-objet); color: #d7dcf3; font-size: 14px; line-height: 1.5; }
+.fiche-carte.pouvoir blockquote { border-left: 3px solid var(--c-pouvoir); }
 .fiche-carte dl { display: grid; gap: 10px; margin: 0 0 16px; }
 .fiche-carte dl div { display: grid; gap: 2px; }
 .fiche-carte dt { font-family: var(--titre); font-weight: 700; font-size: 15px; color: #ffffff; }
@@ -66,8 +66,8 @@ body.cinema #main-joueur { opacity: 0; pointer-events: none; }
 
 /* choisir la carte à garder */
 .choix-cartes { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 12px; }
-.mini-carte { display: flex; flex-direction: column; gap: 6px; padding: 14px; border-radius: 14px; background: #0a0f26; border: 1px solid #38e1ff; min-width: 0; }
-.mini-carte.pouvoir { border-color: #b98cff; }
+.mini-carte { display: flex; flex-direction: column; gap: 6px; padding: 14px; border-radius: 14px; background: #0a0f26; border: 1px dashed var(--c-objet); min-width: 0; }
+.mini-carte.pouvoir { border: 1px solid var(--c-pouvoir); }
 .mini-carte .etiquette { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--doux); }
 .mini-carte h3 { margin: 0; font-family: var(--titre); font-size: 18px; color: #ffffff; }
 .mini-carte p { margin: 0; font-size: 13.5px; line-height: 1.45; color: #d7dcf3; }

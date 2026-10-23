@@ -30,6 +30,19 @@ class Complices3D {
       g.fillStyle = couleur;
       g.beginPath(); g.arc(-20, -8, 13, 0, Math.PI * 2); g.arc(20, -8, 13, 0, Math.PI * 2); g.fill();
       g.fillRect(-4, 14, 8, 14);
+    } else if (id === 'scrollo') { // spirale hypnotique (défilement sans fin)
+      g.lineWidth = 11; g.lineCap = 'round';
+      g.beginPath();
+      for (let a = 0; a <= Math.PI * 6; a += 0.08) { const r = 6 + a * 3.3; const x = Math.cos(a) * r, y = Math.sin(a) * r; if (a === 0) g.moveTo(x, y); else g.lineTo(x, y); }
+      g.stroke();
+    } else if (id === 'fracturo') { // maillon de chaîne brisé (fracture numérique)
+      g.lineWidth = 13; g.lineCap = 'round';
+      g.save(); g.rotate(-0.6);
+      g.beginPath(); g.moveTo(-14, -20); g.arc(-34, 0, 20, -Math.PI / 2, Math.PI / 2, true); g.lineTo(-14, 20); g.stroke();
+      g.beginPath(); g.moveTo(14, -20); g.arc(34, 0, 20, -Math.PI / 2, Math.PI / 2); g.lineTo(14, 20); g.stroke();
+      g.restore();
+      g.lineWidth = 7;
+      for (const [x1, y1, x2, y2] of [[-6, -46, 0, -30], [8, -50, 6, -32], [-4, 30, 2, 48], [10, 32, 16, 48]]) { g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); }
     } else { // œil (Datata)
       g.lineWidth = 12;
       g.beginPath(); g.moveTo(-66, 0); g.quadraticCurveTo(0, -60, 66, 0); g.quadraticCurveTo(0, 60, -66, 0); g.stroke();
@@ -75,6 +88,8 @@ class Complices3D {
   }
 
   _complices3D() {
+    // reconstruction (passage en mode Pro) : on retire les anciennes figures
+    for (const f of Object.values(this.figures || {})) this.scene.remove(f.groupe);
     this.figures = {};
     const sources = window.NV_TEXTURES_COMPLICES || {};
     const scan = this._texScanlines();
@@ -82,13 +97,17 @@ class Complices3D {
     const matSocle = new THREE.MeshStandardMaterial({ color: '#151b36', roughness: 0.35, metalness: 0.7 });
     NV.ORDRE_COMPLICES.forEach((id, i) => {
       const c = NV.COMPLICES[id];
-      const iCase = NV.BOUCLE.findIndex((b) => b.type === 'face' && b.c === id);
-      const pCase = this.posCase(iCase);
-      const dehors = new THREE.Vector3(pCase.x, 0, pCase.z).normalize();
-      const base = pCase.clone().add(dehors.multiplyScalar(0.66));
-      // le socle reste entièrement sur le plateau
-      base.x = THREE.MathUtils.clamp(base.x, -4.55, 4.55);
-      base.z = THREE.MathUtils.clamp(base.z, -4.55, 4.55);
+      let base;
+      if (c.fig3d) base = new THREE.Vector3(c.fig3d.x, this.HAUT + c.fig3d.y, c.fig3d.z); // mode Pro : sur la terrasse du quartier
+      else {
+        const iCase = NV.BOUCLE.findIndex((b) => b.type === 'face' && b.c === id);
+        const pCase = this.posCase(iCase);
+        const dehors = new THREE.Vector3(pCase.x, 0, pCase.z).normalize();
+        base = pCase.clone().add(dehors.multiplyScalar(0.66));
+        // le socle reste entièrement sur le plateau
+        base.x = THREE.MathUtils.clamp(base.x, -4.55, 4.55);
+        base.z = THREE.MathUtils.clamp(base.z, -4.55, 4.55);
+      }
       const groupe = new THREE.Group();
       groupe.position.copy(base);
 
@@ -142,7 +161,7 @@ class Complices3D {
   /** Position (au niveau du buste) d'un Complice 3D : utile pour cadrer les cinématiques. */
   posFigure(id, hauteur = 0.72) {
     const f = this.figures && this.figures[id];
-    return f ? f.groupe.position.clone().add(f.decal).setY(this.HAUT + hauteur) : this.posCase(0);
+    return f ? f.groupe.position.clone().add(f.decal).setY(f.groupe.position.y + hauteur) : this.posCase(0);
   }
 
   /** Transformation du Complice : le buste « grésille » puis change d'apparence. */
@@ -182,17 +201,18 @@ class Complices3D {
     if (droite.lengthSq() < 1e-6) return null;
     droite.normalize();
     const ecran = (v) => { const p = v.clone().project(cam); return { x: p.x, y: p.y, z: p.z }; };
-    const centre = new THREE.Vector3(g.x, this.HAUT + 0.72, g.z);
+    const centre = new THREE.Vector3(g.x, g.y + 0.72, g.z);
     const cF = ecran(centre), dF = ecran(centre.clone().addScaledVector(droite, 0.56));
     const demiL = Math.abs(dF.x - cF.x);                       // demi-largeur du buste à l'écran
     if (demiL < 1e-4 || cF.z > 1) return null;
-    const hautF = ecran(new THREE.Vector3(g.x, this.HAUT + 1.5, g.z)).y, basF = ecran(new THREE.Vector3(g.x, this.HAUT + 0.3, g.z)).y;
+    const hautF = ecran(new THREE.Vector3(g.x, g.y + 1.5, g.z)).y, basF = ecran(new THREE.Vector3(g.x, g.y + 0.3, g.z)).y;
     let besoin = 0, sens = 0;
     for (const pion of Object.values(this.pions)) {
       const q = pion.position;
       if (Math.hypot(q.x - g.x, q.z - g.z) > 2.6) continue;
-      const pB = ecran(new THREE.Vector3(q.x, this.HAUT, q.z)), pH = ecran(new THREE.Vector3(q.x, this.HAUT + 1.45, q.z));
-      const pD = ecran(new THREE.Vector3(q.x, this.HAUT + 1.12, q.z).addScaledVector(droite, 0.36));
+      const sol = pion.userData.sol ?? this.HAUT;
+      const pB = ecran(new THREE.Vector3(q.x, sol, q.z)), pH = ecran(new THREE.Vector3(q.x, sol + 1.45, q.z));
+      const pD = ecran(new THREE.Vector3(q.x, sol + 1.12, q.z).addScaledVector(droite, 0.36));
       const demiP = Math.abs(pD.x - pH.x);
       const chevaucheY = Math.min(hautF, pH.y) - Math.max(basF, pB.y) > 0;
       const ecart = cF.x - pH.x;

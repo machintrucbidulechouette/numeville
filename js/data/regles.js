@@ -117,8 +117,15 @@
     { id: 'consoexpress', titre: 'Consommation express',     texte: 'Le joueur qui a déclenché cette carte doit lancer à nouveau le dé noir : sur 1-2-3 rien ne se passe ; sur 4-5-6 il doit répondre à 1 question difficile sur Hyperco.' },
   ];
 
+  /* Couleurs réservées aux cases Objet et Pouvoir (mode avancé) : distinctes de celles des Éclaireurs,
+     des Complices et des anneaux de destination ; la forme du marqueur les distingue aussi. */
+  const COULEURS_CASES = { objet: '#e9eef6', pouvoir: '#d9b23c' };
+
+  /* Conditions de fin de partie (le mode Pro, à 6 Complices, les remplace) */
+  const FIN = { totale: 4, victoire: 3, defaite: 2 };
+
   window.NV = {
     COMPLICES, ORDRE_COMPLICES, BOUCLE, DEPARTS, PIOCHES, ECLAIREURS,
-    SEUILS, NIVEAUX, CARTES_FIN, CARTES_ATTAQUE,
+    SEUILS, NIVEAUX, CARTES_FIN, CARTES_ATTAQUE, COULEURS_CASES, FIN,
   };
 })();

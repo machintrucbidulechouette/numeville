@@ -27,8 +27,15 @@ class Plateau3D {
   versMonde(u, v, y = this.HAUT) {
     return new THREE.Vector3((u - 0.5) * this.TAILLE, y, (v - 0.5) * this.TAILLE);
   }
-  posCase(index) { const c = NV.BOUCLE[index]; return this.versMonde(c.u, c.v); }
-  posDepart(i) { const d = NV.DEPARTS[i]; return this.versMonde(d.u, d.v); }
+  /** Centre d'une case (sa face supérieure). Mode Pro : cases en 3D, à différentes hauteurs (champ p). */
+  posCase(index) { const c = NV.BOUCLE[index]; return c.p ? new THREE.Vector3(c.p.x, this.HAUT + c.p.y, c.p.z) : this.versMonde(c.u, c.v); }
+  posDepart(i) { const d = NV.DEPARTS[i]; return d.p ? new THREE.Vector3(d.p.x, this.HAUT + d.p.y, d.p.z) : this.versMonde(d.u, d.v); }
+  /** Zone d'un Complice (lumière, jetons, badge) ; y = hauteur au-dessus du sol de sa zone. */
+  posZone(id, y = this.HAUT) {
+    const c = NV.COMPLICES[id];
+    if (c.zone3d) return new THREE.Vector3(c.zone3d.x, c.zone3d.y + y, c.zone3d.z);
+    return this.versMonde(c.zone.u, c.zone.v, y);
+  }
 
   /** Anime sur `duree` ms ; `cine` = animation de cinématique (peut être passée). */
   animer(duree, maj, cine = false) {
@@ -93,14 +100,7 @@ class Plateau3D {
     soleil.shadow.normalBias = 0.02;
     soleil.shadow.radius = 3;
     scene.add(soleil);
-    for (const id of NV.ORDRE_COMPLICES) {
-      const c = NV.COMPLICES[id];
-      const l = new THREE.PointLight(c.couleur, 6, 7, 1.6);
-      const p = this.versMonde(c.zone.u, c.zone.v, 1.6);
-      l.position.copy(p);
-      scene.add(l);
-      c._lumiere = l;
-    }
+    this._lumieresComplices();
 
     this._table();
     this._plateau();
@@ -113,6 +113,18 @@ class Plateau3D {
     window.addEventListener('resize', () => this.redimensionner());
     this.redimensionner();
     r.setAnimationLoop((temps) => this._boucle(temps));
+  }
+
+  /** Une lumière colorée au-dessus du quartier de chaque Complice. */
+  _lumieresComplices() {
+    for (const id of NV.ORDRE_COMPLICES) {
+      const c = NV.COMPLICES[id];
+      if (c._lumiere) this.scene.remove(c._lumiere);
+      const l = new THREE.PointLight(c.couleur, 6, 7, 1.6);
+      l.position.copy(this.posZone(id, 1.6));
+      this.scene.add(l);
+      c._lumiere = l;
+    }
   }
 
   _table() {
@@ -152,6 +164,7 @@ class Plateau3D {
     plateau.receiveShadow = true;
     plateau.castShadow = true;
     this.scene.add(plateau);
+    this._decorBase = [plateau];
 
     // Liseré lumineux autour du plateau
     const cadre = new THREE.Mesh(
@@ -160,6 +173,7 @@ class Plateau3D {
     );
     cadre.position.y = -0.05;
     this.scene.add(cadre);
+    this._decorBase.push(cadre);
   }
 
   _marqueurs() {
@@ -337,9 +351,10 @@ class Plateau3D {
     occ.forEach((pion, rang) => {
       if (pion === sauf) return;
       const b = this._posEmplacement(cle, rang, occ.length);
-      if (!duree) { pion.position.set(b.x, this.HAUT, b.z); return; }
+      pion.userData.sol = b.y;
+      if (!duree) { pion.position.copy(b); return; }
       const a = pion.position.clone();
-      this.animer(duree, (t) => { const k = Plateau3D.ease(t); pion.position.set(a.x + (b.x - a.x) * k, this.HAUT, a.z + (b.z - a.z) * k); });
+      this.animer(duree, (t) => { const k = Plateau3D.ease(t); pion.position.lerpVectors(a, b, k); });
     });
   }
 
@@ -372,13 +387,16 @@ class Plateau3D {
       }
       const a = pion.position.clone();
       this._son('pas');
+      // une marche à monter ou à descendre (mode Pro) : le saut est un peu plus haut
+      const bond = 0.55 + Math.abs(b.y - a.y) * 0.5;
       await this.animer(260, (t) => {
         const k = Plateau3D.ease(t);
         pion.position.lerpVectors(a, b, k);
-        pion.position.y = this.HAUT + Math.sin(Math.PI * t) * 0.55;
+        pion.position.y = a.y + (b.y - a.y) * k + Math.sin(Math.PI * t) * bond;
       });
+      pion.position.copy(b);
+      pion.userData.sol = b.y;
     }
-    pion.position.y = this.HAUT;
   }
 
   montrerJoueurActif(joueur) {
@@ -446,7 +464,7 @@ class Plateau3D {
   montrerDestinations(indices, couleurs) {
     this.anneauxDest.forEach((a, i) => {
       if (indices[i] === undefined) { a.visible = false; return; }
-      a.position.copy(this.posCase(indices[i])).setY(this.HAUT + 0.02);
+      a.position.copy(this.posCase(indices[i])).add(new THREE.Vector3(0, 0.02, 0));
       a.material.color.set(couleurs[i] || '#ffffff');
       a.visible = true;
     });
@@ -454,34 +472,69 @@ class Plateau3D {
   cacherDestinations() { this.anneauxDest.forEach((a) => (a.visible = false)); }
 
   /* ---------- Cases Objet et Pouvoir (mode avancé) ---------- */
-  /** Anneau lumineux sur la case + icône flottante (dos de carte), légèrement décalée vers le centre. */
+  /**
+   * Marqueur au sol + icône flottante (dos de carte), légèrement décalée vers le centre.
+   * Formes et couleurs réservées, différentes de celles des Éclaireurs (anneaux ronds et pleins)
+   * et des anneaux de destination : Objet = hexagone argenté en pointillés, Pouvoir = étoile noir et or.
+   */
   placerMarqueurAvance(type, idx) {
     this.marqueursAvance = this.marqueursAvance || [];
-    const couleur = type === 'objet' ? '#38e1ff' : '#b98cff';
+    const couleur = NV.COULEURS_CASES[type];
     const pos = this.posCase(idx);
-    const anneau = new THREE.Mesh(new THREE.RingGeometry(0.44, 0.52, 48),
-      new THREE.MeshBasicMaterial({ color: couleur, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false }));
-    anneau.rotation.x = -Math.PI / 2;
-    anneau.position.copy(pos).setY(this.HAUT + 0.012);
+    const forme = new THREE.Group();
+    const matLigne = new THREE.MeshBasicMaterial({ color: couleur, transparent: true, opacity: 0.95, side: THREE.DoubleSide, depthWrite: false });
+    let interieur;
+    if (type === 'objet') {
+      // hexagone plein fin + pointillés hexagonaux qui tournent en sens inverse
+      forme.add(new THREE.Mesh(new THREE.RingGeometry(0.47, 0.53, 6, 1, Math.PI / 6), matLigne));
+      interieur = new THREE.Group();
+      for (let i = 0; i < 6; i++) {
+        const tiret = new THREE.Mesh(new THREE.RingGeometry(0.36, 0.41, 6, 1, Math.PI / 6 + i * Math.PI / 3 + 0.12, Math.PI / 3 - 0.24), matLigne);
+        interieur.add(tiret);
+      }
+      forme.add(interieur);
+    } else {
+      // étoile à 6 branches : contour or, intérieur noir translucide
+      const etoile = (R, r) => {
+        const sh = new THREE.Shape();
+        for (let i = 0; i < 12; i++) {
+          const a = i * Math.PI / 6 + Math.PI / 2, rr = i % 2 ? r : R;
+          if (i === 0) sh.moveTo(Math.cos(a) * rr, Math.sin(a) * rr); else sh.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+        }
+        sh.closePath();
+        return sh;
+      };
+      const contour = etoile(0.6, 0.38);
+      const trou = etoile(0.51, 0.31);
+      contour.holes.push(new THREE.Path(trou.getPoints()));
+      forme.add(new THREE.Mesh(new THREE.ShapeGeometry(contour), matLigne));
+      interieur = new THREE.Mesh(new THREE.ShapeGeometry(trou), new THREE.MeshBasicMaterial({ color: '#120d04', transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false }));
+      interieur.position.z = -0.001;
+      forme.add(interieur);
+    }
+    forme.rotation.x = -Math.PI / 2;
+    forme.position.copy(pos).add(new THREE.Vector3(0, 0.014, 0));
     const src = window.NV_TEXTURES_AVANCE && window.NV_TEXTURES_AVANCE[type];
     const icone = new THREE.Sprite(new THREE.SpriteMaterial({ map: src ? this.chargerTexture(src) : null, color: src ? '#ffffff' : couleur, transparent: true }));
     icone.scale.setScalar(0.5);
     const versCentre = new THREE.Vector3(-pos.x, 0, -pos.z).normalize().multiplyScalar(0.48);
     const base = pos.clone().add(versCentre);
-    icone.position.copy(base).setY(this.HAUT + 0.6);
+    icone.position.copy(base).setY(pos.y + 0.6);
     const tige = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.5, 8),
-      new THREE.MeshBasicMaterial({ color: couleur, transparent: true, opacity: 0.6 }));
-    tige.position.copy(base).setY(this.HAUT + 0.25);
-    this.scene.add(anneau, icone, tige);
-    this.marqueursAvance.push({ anneau, icone, y: this.HAUT + 0.6, phase: this.marqueursAvance.length * 2 });
+      new THREE.MeshBasicMaterial({ color: couleur, transparent: true, opacity: 0.7 }));
+    tige.position.copy(base).setY(pos.y + 0.25);
+    this.scene.add(forme, icone, tige);
+    this.marqueursAvance.push({ forme, interieur, type, icone, y: pos.y + 0.6, phase: this.marqueursAvance.length * 2 });
   }
 
   _animerMarqueursAvance(temps) {
     if (!this.marqueursAvance) return;
     for (const m of this.marqueursAvance) {
       m.icone.position.y = m.y + Math.sin(temps * 1.8 + m.phase) * 0.06;
-      m.anneau.material.opacity = 0.55 + 0.35 * Math.sin(temps * 2.4 + m.phase);
-      m.anneau.rotation.z = temps * 0.4;
+      m.forme.rotation.z = temps * (m.type === 'objet' ? 0.35 : 0.22);
+      if (m.type === 'objet') m.interieur.rotation.z = -temps * 0.9;
+      const s = 1 + 0.05 * Math.sin(temps * 2.4 + m.phase);
+      m.forme.scale.set(s, s, 1);
     }
   }
 
@@ -498,9 +551,15 @@ class Plateau3D {
 
   _posJeton(id, couleur, n) {
     const c = NV.COMPLICES[id];
-    const base = this.versMonde(c.zone.u, c.zone.v);
+    const base = this.posZone(id);
     // jetons alignés en deux rangées (bleus au-dessus, rouges en dessous) comme sur la fiche Complice
     const col = n % 5, rang = Math.floor(n / 5);
+    if (c.zone3d) {
+      // mode Pro : rangées parallèles au bord du quartier (t : le long du bord, n : vers l'extérieur)
+      const t = c.zone3d.t, nn = c.zone3d.n;
+      const dl = -0.8 + col * 0.4, dn = (couleur === 'bleu' ? 0.3 : -0.3) + rang * 0.12;
+      return new THREE.Vector3(base.x + t.x * dl + nn.x * dn, base.y + 0.04 + rang * 0.07, base.z + t.z * dl + nn.z * dn);
+    }
     const x = base.x - 0.8 + col * 0.4;
     const z = base.z + (couleur === 'bleu' ? -0.35 : 0.35) + rang * 0.12;
     return new THREE.Vector3(x, this.HAUT + 0.04 + rang * 0.07, z);
@@ -561,8 +620,9 @@ class Plateau3D {
     const t = new THREE.CanvasTexture(cv);
     t.colorSpace = THREE.SRGBColorSpace;
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true }));
-    const p = this.versMonde(c.zone.u, c.zone.v, 0.9);
+    const p = this.posZone(id, 0.9);
     s.position.copy(p);
+    s.userData.y0 = p.y;
     s.scale.set(0.01, 0.01, 1);
     this.scene.add(s);
     this.animer(700, (k) => { const e = Plateau3D.easeOut(k) * (1 + 0.15 * Math.sin(k * Math.PI)); s.scale.set(2.2 * e, 0.82 * e, 1); });
@@ -576,7 +636,8 @@ class Plateau3D {
       const p = NV.PIOCHES[type];
       const dos = new THREE.MeshStandardMaterial({ map: this.chargerTexture(window.NV_TEXTURES[cle]), roughness: 0.5 });
       const tranche = new THREE.MeshStandardMaterial({ color: '#e9e9ef', roughness: 0.8 });
-      this.pioches[type] = { cartes: [], dos, tranche, w: p.w * T, h: p.h * T, base: this.versMonde(p.u, p.v) };
+      const base = p.p ? new THREE.Vector3(p.p.x, this.HAUT, p.p.z) : this.versMonde(p.u, p.v);
+      this.pioches[type] = { cartes: [], dos, tranche, w: p.w * T, h: p.h * T, base };
     }
   }
 
@@ -645,12 +706,12 @@ class Plateau3D {
       return true;
     });
     if (this.pionActif && this.anneauActif.visible) {
-      this.anneauActif.position.set(this.pionActif.position.x, this.HAUT + 0.015, this.pionActif.position.z);
+      this.anneauActif.position.set(this.pionActif.position.x, (this.pionActif.userData.sol ?? this.HAUT) + 0.015, this.pionActif.position.z);
       const s = 1 + 0.12 * Math.sin(temps * 4);
       this.anneauActif.scale.set(s, s, s);
     }
     for (const a of this.anneauxDest) if (a.visible) a.material.opacity = 0.55 + 0.4 * Math.sin(temps * 6);
-    for (const z of Object.values(this.jetons)) if (z.badge) z.badge.position.y = 0.95 + Math.sin(temps * 2) * 0.05;
+    for (const z of Object.values(this.jetons)) if (z.badge) z.badge.position.y = z.badge.userData.y0 + 0.05 + Math.sin(temps * 2) * 0.05;
     this._animerFigures(temps);
     this._animerMarqueursAvance(temps);
     this._appliquerAmbiance(temps, Math.min(0.1, temps - (this._tAmb ?? temps)));

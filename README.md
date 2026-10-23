@@ -18,7 +18,8 @@ Si besoin, on peut aussi servir le dossier : `python3 -m http.server` puis http:
 Sur l'écran d'accueil, choisir **🌐 En ligne entre amis** :
 1. un joueur entre son prénom et clique sur **Créer une partie** : il reçoit un **code** de 5 caractères (et un lien à copier) ;
 2. ses amis (2 à 4 joueurs en tout) entrent ce code, ou ouvrent le lien, puis **Rejoindre** ;
-3. dans le salon, chacun choisit son Éclaireur ; l'hôte règle le niveau et le mode avancé, puis lance la partie.
+3. dans le salon, chacun choisit son Éclaireur et peut **changer de prénom** (bouton ✏️) ; l'hôte règle le mode de jeu
+   (Classique, Avancé ou Pro) et le niveau, puis lance la partie.
 
 Pendant la partie, seul le joueur dont c'est le tour peut cliquer ; les autres voient la même chose en direct
 (« C'est à … de jouer »). Une carte jouée hors de son tour (Coffre-fort, Mémoire longue, Veilleur…) est décidée par son détenteur.
@@ -36,6 +37,7 @@ Fonctionnement : chaque navigateur fait tourner le même moteur de règles. Les 
 Le jeu en ligne nécessite le site publié (GitHub Pages) ou un serveur local : il ne marche pas en ouvrant `index.html` directement.
 
 Règles de sécurité de la base : `firebase-regles.json` (à coller dans Firebase › Realtime Database › Règles).
+**À republier avec cette version** : le réglage `pro` du salon a été ajouté (sans lui, le choix du mode Pro est refusé).
 Seuls les membres d'une partie peuvent la lire ; on ne peut plus rejoindre une partie commencée ;
 seul l'hôte change les réglages et lance la partie ; une action déjà jouée ne peut pas être réécrite.
 
@@ -93,6 +95,30 @@ seul l'hôte change les réglages et lance la partie ; une action déjà jouée 
 - Le jeu propose chaque carte **au bon moment** (avant le dé blanc, après un dé, avant ou après une question, à une attaque,
   en fin de tour, en fin de manche…). Les cartes du joueur actif s'affichent en bas de l'écran : un clic permet de relire leur texte.
 
+### Mode Pro
+
+Troisième mode de jeu, à choisir sur l'écran d'accueil ou dans le salon (niveau Standard ou Expert). Il comprend le mode avancé.
+- **Grand plateau en 3D** construit par le code (plus l'image imprimée) : boucle hexagonale de **25 cases** (la Place + 4 cases par quartier)
+  sur **trois niveaux** (rez-de-chaussée, terrasses, toits) reliés par des **escaliers** ; les pions sautent les marches.
+- **6 Complices** : les 4 du jeu, plus **Scrollo** (économie de l'attention, temps d'écran, sommeil ; sauvé, il redevient Carlo)
+  et **Fracturo** (fracture numérique, accessibilité, inclusion ; sauvé, il redevient Arturo).
+  Ces deux personnages, leurs illustrations et leurs **100 questions** (avec explications et sources) sont des créations de ce projet,
+  ils ne font pas partie du jeu de l'INR.
+- Fin de partie : **6 sauvés** = victoire totale, **au moins 4** = victoire, **3 perdus** = défaite.
+- **Jetpack** 🚀 (2 cartes Objet) : après le dé blanc, avancer de 3 cases de plus en survolant le plateau (animation de vol).
+- **Cases malus** : *Toboggan à pop-ups* 📉 (on redescend de 3 cases en bas de l'escalier, sans piocher de carte sur la case d'arrivée)
+  et *Batterie à plat* 🪫 (on perd son Objet ; sans Objet, 1 jeton mauvaise pratique pour le Complice du quartier ; le Bouclier numérique l'annule).
+- 4 cartes Fin de manche et 4 cartes Attaque en plus, liées aux nouveaux Complices.
+- **Cinématiques** de victoire totale (la caméra descend en spirale et passe devant chaque Complice libéré, puis feu d'artifice)
+  et de défaite (les quartiers s'éteignent, le **Dark Master** surgit en hologramme géant, yeux rouges, et éclate de rire).
+
+### Dans tous les modes
+
+- **« C'est ton tour ! »** : une fenêtre éclair au centre de l'écran, aux couleurs de l'Éclaireur, au début de chaque tour
+  (en ligne : « C'est ton tour ! » pour le joueur concerné, « C'est au tour de … » pour les autres). Elle se ferme seule.
+- Cases **Objet** et **Pouvoir** : nouvelles formes et couleurs réservées (hexagone argenté en pointillés, étoile noir et or),
+  qui ne se confondent plus avec les couleurs des Éclaireurs ni avec les anneaux de destination.
+
 Non inclus pour l'instant : le **mode Atelier** (animation de groupe en classe).
 
 ## Organisation du code
@@ -107,11 +133,15 @@ css/
   son.css                  panneau des réglages du son
   avance.css               mode avancé : interrupteur, cartes en main, minute de concertation
   en-ligne.css             jeu en ligne : choix du mode, salon d'attente, tour des autres joueurs, pause
+  pro.css                  choix du mode, « C'est ton tour », fiches du mode Pro, renommage dans le salon
   adaptatif.css            petits écrans et « réduire les animations » (chargé en dernier)
 js/
   outils.js                NV_etendre (classe découpée en plusieurs fichiers), NV_alea (hasard à graine), NV_nomPropre
   data/
     regles.js              plateau, Complices, Éclaireurs, seuils, cartes Dark Master
+    regles-pro.js          mode Pro : grand plateau, Scrollo et Fracturo, cases malus, Jetpack, cartes en plus
+    questions-pro.js       mode Pro : 100 questions de Scrollo et Fracturo
+    textures-pro.js        mode Pro : bustes de Scrollo et Fracturo, hologramme du Dark Master
     cartes-avancees.js     les 13 Objets et 13 Pouvoirs
     questions.js           les 200 questions + explications du livret maître du jeu
     textures.js            images pour WebGL (pions, pioches, bustes des Complices, icônes)
@@ -124,10 +154,13 @@ js/
     complices3d.js         les 4 Complices en 3D
     effets3d.js            étiquettes et particules
     cinematiques.js        caméra (recentrage fiable) et cinématiques
+    plateau-pro3d.js       mode Pro : plateau hexagonal en 3D (terrasses, escaliers, cases, immeubles)
+    cinematiques-pro.js    mode Pro : vol en Jetpack, toboggan, cases malus, victoire totale et défaite
   jeu/
     jeu.js                 moteur de règles : manches, tour de jeu en étapes, jetons, questions
     cartes-dark-master.js  cartes Fin de manche et Attaque
     mode-avance.js         cartes Objet et Pouvoir
+    mode-pro.js            mode Pro : Jetpack et cases malus
   ui/
     interface.js           interface HTML : actions, questions, cartes, choix, main du joueur, fin de partie
     main.js                écran d'accueil, réglages du son, démarrage

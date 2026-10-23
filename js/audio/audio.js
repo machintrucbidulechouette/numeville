@@ -300,6 +300,130 @@ class AudioNumeville {
     this._bruitFiltre({ duree: 2.6, vol: 0.18, type: 'lowpass', f: 300, f2: 80, attaque: 0.6 });
   }
 
+  /* ---------------- sons du mode Pro et nouveautés ---------------- */
+
+  /** Début de tour : petit carillon à deux notes (plus vif quand c'est à toi). */
+  _tour({ moi = true } = {}) {
+    const n = moi ? [79, 86] : [72, 79];
+    n.forEach((m, i) => this._ton({ type: 'sine', f: midi(m), t: i * 0.11, duree: 0.45, vol: moi ? 0.09 : 0.05, reverb: 0.5 }));
+    this._ton({ type: 'triangle', f: midi(n[1] + 12), t: 0.11, duree: 0.18, vol: 0.025 });
+  }
+
+  /** Jetpack : allumage, souffle des réacteurs qui monte puis s'éloigne. */
+  _jetpack() {
+    this._ton({ type: 'square', f: 90, f2: 60, duree: 0.12, vol: 0.08, filtre: 600 });
+    this._bruitFiltre({ t: 0.05, duree: 2.2, vol: 0.28, type: 'bandpass', f: 300, f2: 1400, Q: 0.8, attaque: 0.35, reverb: 0.25 });
+    this._bruitFiltre({ t: 0.05, duree: 2.0, vol: 0.12, type: 'lowpass', f: 180, f2: 420, attaque: 0.2 });
+    this._ton({ type: 'sawtooth', f: 70, f2: 160, t: 0.1, duree: 1.6, vol: 0.05, filtre: 500, attaque: 0.3 });
+  }
+
+  /** Case malus : sirène descendante et grésillement. */
+  _malus() {
+    this._ton({ type: 'square', f: midi(76), f2: midi(64), duree: 0.32, vol: 0.06, filtre: 1800 });
+    this._ton({ type: 'square', f: midi(73), f2: midi(61), t: 0.3, duree: 0.42, vol: 0.06, filtre: 1500 });
+    this._bruitFiltre({ t: 0.05, duree: 0.6, vol: 0.08, type: 'highpass', f: 3000 });
+  }
+
+  /** Quartier qui se rallume (victoire totale) : une note de la gamme par Complice. */
+  _carillon({ n = 0 } = {}) {
+    const notes = [72, 74, 76, 79, 81, 84];
+    const m = notes[n % notes.length];
+    this._ton({ type: 'sine', f: midi(m), duree: 1.6, vol: 0.1, reverb: 0.8 });
+    this._ton({ type: 'sine', f: midi(m + 12), t: 0.02, duree: 1.0, vol: 0.04, reverb: 0.8 });
+    this._ton({ type: 'triangle', f: midi(m - 12), duree: 1.2, vol: 0.04, attaque: 0.05, reverb: 0.5 });
+  }
+
+  /** Feu d'artifice : sifflement puis petite explosion. */
+  _petard() {
+    this._bruitFiltre({ duree: 0.35, vol: 0.06, type: 'bandpass', f: 1800, f2: 5200, Q: 8 });
+    this._bruitFiltre({ t: 0.35, duree: 0.7, vol: 0.22, type: 'lowpass', f: 1600, f2: 200, reverb: 0.5 });
+  }
+
+  /** Victoire totale (mode Pro) : grande fanfare en trois temps. */
+  _victoirePro() {
+    const m = [[60, 0], [64, 0.18], [67, 0.36], [72, 0.54], [71, 0.9], [72, 1.08], [76, 1.26], [79, 1.62]];
+    m.forEach(([n, t]) => {
+      this._ton({ type: 'sawtooth', f: midi(n), t, duree: 0.4, vol: 0.06, filtre: 2600, reverb: 0.4 });
+      this._ton({ type: 'triangle', f: midi(n + 12), t, duree: 0.32, vol: 0.04 });
+    });
+    [60, 64, 67, 72, 76, 79].forEach((n) => this._ton({ type: 'sawtooth', f: midi(n), t: 1.9, duree: 4.5, attaque: 0.6, vol: 0.035, filtre: 3000, reverb: 0.7 }));
+    this._bruitFiltre({ t: 1.9, duree: 4, vol: 0.05, type: 'highpass', f: 5000, f2: 9000, attaque: 1.5 });
+  }
+
+  /** Défaite (mode Pro) : grondement grave qui monte, accord sombre. */
+  _defaitePro() {
+    this._ton({ type: 'sawtooth', f: midi(28), duree: 6, attaque: 1.5, vol: 0.12, filtre: 300, reverb: 0.5 });
+    this._ton({ type: 'sawtooth', f: midi(34), duree: 6, attaque: 2, vol: 0.06, filtre: 400, reverb: 0.5 });
+    [[57, 0.5], [55, 1.6], [53, 2.7], [52, 3.8]].forEach(([n, t]) => this._ton({ type: 'triangle', f: midi(n), t, duree: 1.3, vol: 0.07, reverb: 0.7 }));
+    this._bruitFiltre({ duree: 5, vol: 0.12, type: 'lowpass', f: 120, f2: 400, attaque: 2.5, reverb: 0.4 });
+  }
+
+  /** Une lumière de quartier qui grille. */
+  _coupure() {
+    this._bruitFiltre({ duree: 0.18, vol: 0.12, type: 'highpass', f: 2500 });
+    this._ton({ type: 'square', f: 50, duree: 0.25, vol: 0.06, filtre: 300 });
+  }
+
+  /** Apparition de l'hologramme : balayage électrique montant. */
+  _hologramme() {
+    this._ton({ type: 'sawtooth', f: 60, f2: 480, duree: 1.3, vol: 0.06, filtre: 1500, attaque: 0.2, reverb: 0.5 });
+    this._ton({ type: 'sine', f: 120, f2: 960, duree: 1.3, vol: 0.05, attaque: 0.2, reverb: 0.5 });
+    for (let i = 0; i < 6; i++) this._bruitFiltre({ t: Math.random() * 1.2, duree: 0.06, vol: 0.08, type: 'bandpass', f: 3000 + Math.random() * 3000, Q: 3 });
+  }
+
+  /**
+   * Rire du Dark Master : une voix synthétique grave qui articule « ha ! ha ! ha ! haaa ».
+   * Chaque syllabe = souffle (« h ») + son voisé passé dans deux filtres « formants » de la voyelle « a »,
+   * doublé à l'octave inférieure et légèrement saturé, avec beaucoup de réverbération.
+   */
+  _rire() {
+    const ctx = this.ctx, t0 = ctx.currentTime + 0.05;
+    const sortie = ctx.createGain(); sortie.gain.value = 0.9;
+    const sat = ctx.createWaveShaper();
+    const courbe = new Float32Array(1024);
+    for (let i = 0; i < 1024; i++) { const x = i / 512 - 1; courbe[i] = Math.tanh(x * 2.2); }
+    sat.curve = courbe;
+    sat.connect(sortie).connect(this.busEffets);
+    const env = ctx.createGain(); env.gain.value = 0.5; sortie.connect(env).connect(this.reverb);
+    const syllabes = [[0, 0.26, 1], [0.34, 0.24, 0.97], [0.64, 0.24, 0.93], [0.93, 0.25, 0.9], [1.23, 0.26, 0.88], [1.55, 0.3, 0.85], [1.95, 1.1, 0.78]];
+    const F0 = 118;
+    syllabes.forEach(([t, d, h], i) => {
+      const debut = t0 + t;
+      // souffle « h »
+      this._bruitFiltre({ t: t + 0.03, duree: 0.07, vol: 0.12, type: 'bandpass', f: 1400, Q: 1.2, dest: sat });
+      for (const [mult, vol] of [[1, 0.5], [0.5, 0.45]]) {
+        const o = ctx.createOscillator(); o.type = 'sawtooth';
+        const f = F0 * h * mult;
+        o.frequency.setValueAtTime(f * 1.12, debut);
+        o.frequency.exponentialRampToValueAtTime(f, debut + 0.06);
+        o.frequency.exponentialRampToValueAtTime(f * (i === syllabes.length - 1 ? 0.7 : 0.9), debut + d);
+        const vib = ctx.createOscillator(), vg = ctx.createGain(); vib.frequency.value = 6; vg.gain.value = f * 0.02;
+        vib.connect(vg).connect(o.frequency);
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, debut);
+        g.gain.exponentialRampToValueAtTime(vol, debut + 0.04);
+        g.gain.setValueAtTime(vol * 0.8, debut + d * 0.6);
+        g.gain.exponentialRampToValueAtTime(0.0001, debut + d);
+        for (const [ff, q, gv] of [[720, 7, 1.4], [1150, 9, 0.9], [2500, 10, 0.25]]) {
+          const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = ff * (mult < 1 ? 0.92 : 1); bp.Q.value = q;
+          const gg = ctx.createGain(); gg.gain.value = gv;
+          o.connect(bp).connect(gg).connect(g);
+        }
+        g.connect(sat);
+        o.start(debut); o.stop(debut + d + 0.05); vib.start(debut); vib.stop(debut + d + 0.05);
+      }
+    });
+    // grondement sous le rire
+    this._ton({ type: 'sine', f: 46, duree: 3.4, attaque: 0.3, vol: 0.25 });
+  }
+
+  /** Petite mélodie 8 bits. */
+  _fete() {
+    const m = [72, 76, 79, 84, 79, 76, 72, 74, 77, 81, 86, 81, 77, 74, 76, 79, 83, 88];
+    m.forEach((n, i) => this._ton({ type: 'square', f: midi(n), t: i * 0.12, duree: 0.11, vol: 0.035, filtre: 4000 }));
+    [48, 50, 52].forEach((n, i) => this._ton({ type: 'triangle', f: midi(n), t: i * 0.72, duree: 0.7, vol: 0.06 }));
+  }
+
   /** Victoire : fanfare. */
   _victoire() {
     const m = [[60, 0], [64, 0.15], [67, 0.3], [72, 0.45], [67, 0.75], [72, 0.9]];

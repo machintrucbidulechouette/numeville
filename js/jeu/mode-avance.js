@@ -30,7 +30,7 @@ class ModeAvance {
   /** Les joueurs transforment une case en case Objet, puis une autre en case Pouvoir. */
   async installerAvance() {
     if (!this.avance) return;
-    const toutes = NV.BOUCLE.map((_, i) => i);
+    const toutes = NV.BOUCLE.map((_, i) => i).filter((i) => !NV.BOUCLE[i].malus); // pas sur une case malus (mode Pro)
     this.ui.log('🧰 Mode avancé : choisissez la case Objet et la case Pouvoir.');
     this.caseObjet = await this.choisirCase('Case Objet', 'Mettez-vous d’accord sur une case du plateau : elle devient la <b>case Objet</b> (le pion Objet n’en bougera plus).', toutes, true, 'objet');
     this.casePouvoir = await this.choisirCase('Case Pouvoir', 'Choisissez maintenant une autre case : elle devient la <b>case Pouvoir</b>.', toutes.filter((i) => i !== this.caseObjet), true, 'pouvoir');
@@ -50,6 +50,7 @@ class ModeAvance {
     const c = NV.BOUCLE[idx];
     if (c.type === 'place') return 'La Place';
     if (c.type === 'face') return `Portrait de ${this.nomC(c.c)} (face-à-face)`;
+    if (c.malus) return `Quartier de ${this.nomC(c.c)} — case malus`;
     const rang = NV.BOUCLE.filter((b, i) => b.c === c.c && b.type === 'case' && i <= idx).length;
     return `Quartier de ${this.nomC(c.c)} — case ${rang}`;
   }
@@ -174,9 +175,9 @@ class ModeAvance {
   optionsDeplacement(j, relais) {
     if (!this.avance) return [];
     const o = [];
-    if (this.pouvoirDispo(j, 'eclaireur')) o.push({ label: '⚡ Avancer de 2 (Éclaireur rapide)', valeur: 'eclaireur', couleur: '#b98cff' });
-    if (this.aObjet(j, 'gps')) o.push({ label: '🧰 GPS : avancer de 1 à 3', valeur: 'gps', couleur: '#38e1ff' });
-    if (this.aObjet(j, 'plan')) o.push({ label: '🧰 Plan : aller dans un quartier', valeur: 'plan', couleur: '#38e1ff' });
+    if (this.pouvoirDispo(j, 'eclaireur')) o.push({ label: '⚡ Avancer de 2 (Éclaireur rapide)', valeur: 'eclaireur', couleur: NV.COULEURS_CASES.pouvoir });
+    if (this.aObjet(j, 'gps')) o.push({ label: '🧰 GPS : avancer de 1 à 3', valeur: 'gps', couleur: NV.COULEURS_CASES.objet });
+    if (this.aObjet(j, 'plan')) o.push({ label: '🧰 Plan : aller dans un quartier', valeur: 'plan', couleur: NV.COULEURS_CASES.objet });
     if (relais) o.push({ label: '🤝 Relais solidaire : case de mon choix', valeur: 'relais', couleur: '#ffd23f' });
     if (this.aObjet(j, 'kit') && this.estActif('hyperco') && this.complices.hyperco.rouges > 0) o.push({ label: '🧰 Kit de réparation (Hyperco)', valeur: 'kit', couleur: '#3daa35' });
     return o;

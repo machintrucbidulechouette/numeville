@@ -3,7 +3,14 @@
    ===================================================================== */
 
 (function () {
-  const config = { nb: 2, niveau: 'standard', joueurs: [], avance: false };
+  const config = { nb: 2, niveau: 'standard', joueurs: [], jeu: 'base' };
+  /* Modes de jeu : Classique (jeu de base), Avancé (Objets et Pouvoirs), Pro (grand plateau, 6 Complices) */
+  const DESC_MODES = {
+    base: 'Les règles du jeu de plateau : 4 Complices, 15 cases.',
+    avance: 'Cartes Objet et Pouvoir sur deux cases du plateau. Se joue en niveau Standard ou Expert.',
+    pro: 'Grand plateau en 3D avec escaliers, 6 Complices, Objets et Pouvoirs, Jetpack et cases malus. Standard ou Expert.',
+  };
+  window.NV_DESC_MODES = DESC_MODES;
   const ordreEcl = ['ana', 'tom', 'emily', 'hakim'];
   const nomsParDefaut = ['Joueur 1', 'Joueur 2', 'Joueur 3', 'Joueur 4'];
   const CLE_REJOUER = 'numeville-rejouer-local';
@@ -55,16 +62,19 @@
       document.querySelectorAll('#niveaux button').forEach((x) => x.classList.toggle('choisi', x === b));
       majSeuils();
     }));
-    // Mode avancé : uniquement en niveau Standard ou Expert (comme le prévoient les règles)
-    const cAvance = document.querySelector('#mode-avance');
+    // Modes Avancé et Pro : uniquement en niveau Standard ou Expert (comme le prévoient les règles du mode avancé)
     const bDecouverte = document.querySelector('#niveaux button[data-niveau="decouverte"]');
-    cAvance.addEventListener('change', () => {
-      config.avance = cAvance.checked;
-      bDecouverte.disabled = config.avance;
-      bDecouverte.title = config.avance ? 'Le mode avancé se joue en niveau Standard ou Expert' : '';
-      if (config.avance && config.niveau === 'decouverte') document.querySelector('#niveaux button[data-niveau="standard"]').click();
-    });
-    if (cAvance.checked) cAvance.dispatchEvent(new Event('change')); // case restée cochée après un rechargement
+    const choisirJeu = (jeu) => {
+      config.jeu = jeu;
+      document.querySelectorAll('#modes-jeu button').forEach((x) => { x.classList.toggle('choisi', x.dataset.jeu === jeu); x.setAttribute('aria-pressed', String(x.dataset.jeu === jeu)); });
+      document.querySelector('#desc-mode').textContent = DESC_MODES[jeu];
+      const exige = jeu !== 'base';
+      bDecouverte.disabled = exige;
+      bDecouverte.title = exige ? 'Ce mode se joue en niveau Standard ou Expert' : '';
+      if (exige && config.niveau === 'decouverte') document.querySelector('#niveaux button[data-niveau="standard"]').click();
+    };
+    document.querySelectorAll('#modes-jeu button').forEach((b) => b.addEventListener('click', () => choisirJeu(b.dataset.jeu)));
+    choisirJeu('base');
 
     // « Rejouer avec les mêmes joueurs » : on revient sur cet écran avec la même équipe et les mêmes réglages
     let rejouer = null;
@@ -72,8 +82,7 @@
     if (rejouer && Array.isArray(rejouer.joueurs) && rejouer.joueurs.length >= 2) {
       document.querySelector(`#nb-joueurs button[data-nb="${rejouer.joueurs.length}"]`)?.click();
       config.joueurs = rejouer.joueurs.map((j) => ({ nom: NV_nomPropre(j.nom), eclaireur: j.eclaireur }));
-      cAvance.checked = !!rejouer.avance;
-      cAvance.dispatchEvent(new Event('change'));
+      choisirJeu(rejouer.pro ? 'pro' : rejouer.avance ? 'avance' : 'base');
       document.querySelector(`#niveaux button[data-niveau="${rejouer.niveau}"]`)?.click();
       const note = document.createElement('p');
       note.className = 'note-rejouer';
@@ -204,6 +213,13 @@
     window.NV_demarrerPartie = (cfg, avant) => {
       document.querySelector('#accueil').classList.add('cache');
       document.body.classList.add('en-jeu');
+      if (cfg.pro) {
+        // mode Pro : données (6 Complices, grand plateau), scène 3D et fiches reconstruites
+        cfg.avance = true;
+        NV.activerPro();
+        plateau.activerPro();
+        ui.activerPro();
+      }
       const jeu = new Jeu(cfg, plateau, ui);
       window.__jeu = jeu;
       if (avant) avant(jeu);
@@ -212,7 +228,7 @@
     };
     document.querySelector('#btn-jouer').addEventListener('click', () => {
       const joueurs = config.joueurs.map((j, i) => ({ nom: NV_nomPropre(j.nom) || nomsParDefaut[i], eclaireur: j.eclaireur }));
-      const reglages = { joueurs, niveau: config.niveau, avance: config.avance };
+      const reglages = { joueurs, niveau: config.niveau, avance: config.jeu !== 'base', pro: config.jeu === 'pro' };
       ui.boutonsFin = [{
         label: '🔁 Rejouer avec les mêmes joueurs', principal: true,
         action: () => {

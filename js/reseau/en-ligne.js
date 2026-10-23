@@ -186,7 +186,7 @@
       try {
         await S.fb.ecrire(`parties/${code}`, {
           hote: S.uid, cree: t, etat: 'salon',
-          reglages: opt.reglages || { niveau: 'standard', avance: false },
+          reglages: opt.reglages || { niveau: 'standard', avance: false, pro: false },
           membres: { [S.uid]: { nom: prenom, eclaireur: opt.eclaireur || 'ana', en_ligne: true, rejoint: t } },
         });
         if (opt.sansSuivre) return code;
@@ -318,7 +318,9 @@
       const e = m.eclaireur && NV.ECLAIREURS[m.eclaireur];
       places.push(`<li style="--c:${e ? e.couleur : '#5a6496'}" class="${m.en_ligne ? '' : 'absent'}">
         ${e ? `<img src="assets/img/eclaireur-${e.id}.jpg" alt="">` : '<span class="pastille-ecl"></span>'}
-        <span class="qui"><b>${echapper(m.nom)}</b>${m.uid === S.uid ? ' <small>(toi)</small>' : ''}${m.uid === s.hote ? ' <small class="hote">👑 hôte</small>' : ''}</span>
+        <span class="qui">${m.uid === S.uid && S.renommer
+          ? `<input type="text" id="salon-nom" class="champ champ-nom" maxlength="16" value="${echapper(S.renommer.valeur)}" aria-label="Ton nouveau prénom" autocomplete="nickname"><button type="button" class="icone" id="salon-nom-ok" title="Valider" aria-label="Valider le nouveau prénom">✓</button>`
+          : `<b>${echapper(m.nom)}</b>${m.uid === S.uid ? ' <small>(toi)</small> <button type="button" class="icone renommer" id="salon-renommer" title="Changer de prénom" aria-label="Changer de prénom">✏️</button>' : ''}`}${m.uid === s.hote ? ' <small class="hote">👑 hôte</small>' : ''}</span>
         <span class="role">${e ? e.nom : 'choisit son Éclaireur…'}</span>
         <span class="etat-co" title="${m.en_ligne ? 'Connecté·e' : 'Déconnecté·e'}">${m.en_ligne ? '🟢' : '⚪'}</span></li>`);
     }
@@ -329,19 +331,19 @@
       return `<button type="button" class="ecl ${moi.eclaireur === id ? 'choisi' : ''}" data-ecl="${id}" ${pris.includes(id) ? 'disabled' : ''} style="--c:${e.couleur}" title="${e.nom} — ${e.desc}" aria-pressed="${moi.eclaireur === id}"><img src="assets/img/eclaireur-${id}.jpg" alt=""><span>${e.nom}</span></button>`;
     }).join('');
 
+    const jeu = reg.pro ? 'pro' : reg.avance ? 'avance' : 'base';
+    const NOMS_JEU = { base: 'Classique', avance: 'Avancé', pro: 'Pro' };
     const niveaux = ['decouverte', 'standard', 'expert'].map((n) => {
       const [b, r] = NV.SEUILS[nb][n];
-      return `<button type="button" data-niveau="${n}" class="${reg.niveau === n ? 'choisi' : ''}" ${reg.avance && n === 'decouverte' ? 'disabled title="Le mode avancé se joue en niveau Standard ou Expert"' : ''}>${NV.NIVEAUX[n]}<small>${b} 🔵 · ${r} 🔴</small></button>`;
+      return `<button type="button" data-niveau="${n}" class="${reg.niveau === n ? 'choisi' : ''}" ${jeu !== 'base' && n === 'decouverte' ? 'disabled title="Ce mode se joue en niveau Standard ou Expert"' : ''}>${NV.NIVEAUX[n]}<small>${b} 🔵 · ${r} 🔴</small></button>`;
     }).join('');
+    const modesJeu = ['base', 'avance', 'pro'].map((m) => `<button type="button" data-jeu="${m}" class="${jeu === m ? 'choisi' : ''} ${m === 'pro' ? 'bouton-pro' : ''}" aria-pressed="${jeu === m}">${NOMS_JEU[m]}<small>${({ base: 'Le jeu de plateau', avance: 'Objets et Pouvoirs', pro: 'Grand plateau · 6 Complices' })[m]}</small></button>`).join('');
     const reglages = estHote() ? `
+      <div class="segment niveaux modes-jeu" id="salon-jeu" role="group" aria-label="Mode de jeu">${modesJeu}</div>
+      <p class="desc-mode">${(window.NV_DESC_MODES || {})[jeu] || ''}</p>
       <div class="segment niveaux" id="salon-niveaux">${niveaux}</div>
-      <p class="salon-seuils">Un Complice est <b>sauvé à ${seuils[0]} 🔵</b> et <b>perdu à ${seuils[1]} 🔴</b>.</p>
-      <label class="interrupteur" for="salon-avance">
-        <input type="checkbox" id="salon-avance" ${reg.avance ? 'checked' : ''}>
-        <span class="glissiere" aria-hidden="true"></span>
-        <span class="interrupteur-texte"><b>Mode avancé</b> : cartes Objet et Pouvoir sur deux cases du plateau.<small>Se joue en niveau Standard ou Expert.</small></span>
-      </label>` : `
-      <p class="salon-resume">Niveau <b>${NV.NIVEAUX[reg.niveau]}</b> (sauvé à ${seuils[0]} 🔵, perdu à ${seuils[1]} 🔴) · Mode avancé : <b>${reg.avance ? 'oui' : 'non'}</b><br><small>Ces réglages sont choisis par l’hôte.</small></p>`;
+      <p class="salon-seuils">Un Complice est <b>sauvé à ${seuils[0]} 🔵</b> et <b>perdu à ${seuils[1]} 🔴</b>.</p>` : `
+      <p class="salon-resume">Mode <b>${NOMS_JEU[jeu]}</b> · Niveau <b>${NV.NIVEAUX[reg.niveau]}</b> (sauvé à ${seuils[0]} 🔵, perdu à ${seuils[1]} 🔴)<br><small>Ces réglages sont choisis par l’hôte.</small></p>`;
 
     const pret = joueursPrets();
     zone.innerHTML = `
@@ -367,6 +369,26 @@
       ${estHote() && !pret.ok ? `<p class="salon-info">${pret.raison}</p>` : ''}`;
 
     // événements
+    // changer de prénom avant le début de la partie
+    const bRen = $('#salon-renommer', zone);
+    if (bRen) bRen.addEventListener('click', () => { S.renommer = { valeur: moi.nom || '' }; rendreSalon(); });
+    const champ = $('#salon-nom', zone);
+    if (champ) {
+      champ.focus();
+      champ.setSelectionRange(champ.value.length, champ.value.length);
+      champ.addEventListener('input', () => { S.renommer.valeur = champ.value; });
+      const valider = () => validerNom(champ.value);
+      champ.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); valider(); }
+        if (e.key === 'Escape') { S.renommer = null; rendreSalon(); }
+      });
+      $('#salon-nom-ok', zone).addEventListener('click', valider);
+      // quitter le champ valide aussi (sauf s'il disparaît parce que le salon se redessine)
+      champ.addEventListener('blur', (e) => {
+        if (e.relatedTarget && e.relatedTarget.id === 'salon-nom-ok') return;
+        setTimeout(() => { if (S.renommer && document.body.contains(champ) && document.activeElement !== champ) valider(); }, 0);
+      });
+    }
     zone.querySelectorAll('#salon-ecl .ecl').forEach((b) => b.addEventListener('click', () => {
       S.fb.ecrire(chemin(`membres/${S.uid}/eclaireur`), b.dataset.ecl).catch((e) => console.warn(e));
     }));
@@ -386,13 +408,37 @@
       zone.querySelectorAll('#salon-niveaux button').forEach((b) => b.addEventListener('click', () => {
         S.fb.ecrire(chemin('reglages/niveau'), b.dataset.niveau).catch((e) => console.warn(e));
       }));
-      $('#salon-avance', zone).addEventListener('change', (e) => {
-        const avance = e.target.checked;
-        S.fb.maj(chemin('reglages'), { avance, niveau: avance && reg.niveau === 'decouverte' ? 'standard' : reg.niveau }).catch((err) => console.warn(err));
-      });
+      zone.querySelectorAll('#salon-jeu button').forEach((b) => b.addEventListener('click', () => {
+        const m = b.dataset.jeu;
+        S.fb.maj(chemin('reglages'), { avance: m !== 'base', pro: m === 'pro', niveau: m !== 'base' && reg.niveau === 'decouverte' ? 'standard' : reg.niveau }).catch((err) => console.warn(err));
+      }));
       const bl = $('#salon-lancer', zone);
       if (bl) bl.addEventListener('click', lancerDepuisSalon);
     }
+  }
+
+  /**
+   * Nouveau prénom choisi dans le salon : nettoyé, rendu unique (« Julie 2 » si un autre joueur s'appelle déjà Julie),
+   * enregistré pour tous les joueurs et retenu pour les prochaines parties.
+   */
+  function validerNom(saisie) {
+    if (!S.renommer) return;
+    S.renommer = null;
+    let nom = NV_nomPropre(saisie).slice(0, 16);
+    const moi = (S.salle.membres || {})[S.uid] || {};
+    if (!nom || nom === moi.nom) { rendreSalon(); return; }
+    const autres = membresTries().filter((m) => m.uid !== S.uid).map((m) => (m.nom || '').toLowerCase());
+    if (autres.includes(nom.toLowerCase())) {
+      let k = 2;
+      const base = nom.slice(0, 14);
+      while (autres.includes(`${base} ${k}`.toLowerCase())) k++;
+      nom = `${base} ${k}`;
+    }
+    stock.ecrire(CLE_NOM, nom);
+    const champAccueil = $('#el-nom');
+    if (champAccueil) champAccueil.value = nom;
+    S.fb.ecrire(chemin(`membres/${S.uid}/nom`), nom).catch((e) => { console.warn(e); message('Le changement de prénom a échoué. Réessaie.', 'erreur'); });
+    rendreSalon();
   }
 
   /** L'hôte fige la liste des joueurs (ordre d'arrivée = sens horaire) et lance la partie pour tout le monde. */
@@ -407,7 +453,7 @@
     joueurs.forEach((j, i) => { controle[i] = j.uid; });
     try {
       await S.fb.maj(chemin(), {
-        config: { niveau: S.salle.reglages.niveau, avance: !!S.salle.reglages.avance, graine, joueurs },
+        config: { niveau: S.salle.reglages.niveau, avance: !!S.salle.reglages.avance, pro: !!S.salle.reglages.pro, graine, joueurs },
         controle,
         etat: 'jeu',
       });
@@ -442,6 +488,8 @@
       this.envoi = false;   // un clic local est parti, on attend son retour
       this.absence = {};    // uid -> heure où on l'a vu se déconnecter
       this.mesPlaces = cfg.joueurs.map((j, i) => (j.uid === S.uid ? i : -1)).filter((i) => i >= 0);
+      // pop-up de début de tour : « C'est ton tour ! » seulement chez le joueur qui contrôle cet Éclaireur
+      window.NV_monTour = (place) => this.estAMoi(place);
     }
 
     demarrer(deja) {
@@ -461,7 +509,7 @@
       const cfg = this.cfg;
       NV_demarrerPartie({
         joueurs: cfg.joueurs.map((j) => ({ nom: NV_nomPropre(j.nom) || 'Éclaireur', eclaireur: j.eclaireur })),
-        niveau: cfg.niveau, avance: !!cfg.avance, graine: cfg.graine,
+        niveau: cfg.niveau, avance: !!cfg.avance, pro: !!cfg.pro, graine: cfg.graine,
       }, (jeu) => { this.jeu = jeu; });
     }
 
@@ -693,7 +741,7 @@
         return;
       }
       try {
-        const nouveau = await creer(nom, { code, eclaireur, reglages: { niveau: this.cfg.niveau, avance: !!this.cfg.avance }, sansSuivre: true });
+        const nouveau = await creer(nom, { code, eclaireur, reglages: { niveau: this.cfg.niveau, avance: !!this.cfg.avance, pro: !!this.cfg.pro }, sansSuivre: true });
         stock.ecrire(CLE_SALLE, nouveau, true); // au rechargement, on entre directement dans son salon
         location.reload();
       } catch (e) {

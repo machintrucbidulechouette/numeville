@@ -57,7 +57,8 @@ class Jeu {
     this.effetsProchains = {};   // effets programmés pour la manche suivante
     this.fin = null;             // résultat quand la partie est terminée
     this.ordre = this.joueurs.slice();
-    this.initAvance(config.avance); // mode avancé : Objets et Pouvoirs (js/jeu/mode-avance.js)
+    this.pro = !!config.pro;          // mode Pro : grand plateau, 6 Complices, Jetpack, cases malus (js/jeu/mode-pro.js)
+    this.initAvance(config.avance || this.pro); // mode avancé : Objets et Pouvoirs (js/jeu/mode-avance.js)
   }
 
   /* ===================== utilitaires ===================== */
@@ -171,9 +172,10 @@ class Jeu {
   verifierFin() {
     if (this.fin) return;
     const s = this.compte('sauve'), p = this.compte('perdu');
-    if (s === 4) this.fin = { type: 'totale' };
-    else if (p >= 2) this.fin = { type: 'defaite', raison: '2 Complices sont perdus.' };
-    else if (this.actifs().length === 0) this.fin = { type: s >= 3 ? 'victoire' : 'defaite', raison: 'Tous les Complices ont un sort scellé.' };
+    const F = NV.FIN; // jeu de base : 4 / 3 / 2 ; mode Pro : 6 / 4 / 3
+    if (s === F.totale) this.fin = { type: 'totale' };
+    else if (p >= F.defaite) this.fin = { type: 'defaite', raison: `${F.defaite} Complices sont perdus.` };
+    else if (this.actifs().length === 0) this.fin = { type: s >= F.victoire ? 'victoire' : 'defaite', raison: 'Tous les Complices ont un sort scellé.' };
   }
 
   /* ===================== déplacement ===================== */
@@ -249,7 +251,7 @@ class Jeu {
     this.son('intro');
     if (window.NV_AUDIO) NV_AUDIO.demarrerMusique();
     await this.cine(() => this.plateau.cineIntro(), 'Numéville',
-      'Le Dark Master et ses 4 Complices ont pris le contrôle de la ville. Éclaireurs, à vous de jouer !', '#38e1ff');
+      `Le Dark Master et ses ${NV.ORDRE_COMPLICES.length} Complices ont pris le contrôle de la ville. Éclaireurs, à vous de jouer !`, '#38e1ff');
 
     await this.installerAvance();
     await this.choisirPremierJoueur();
@@ -280,8 +282,19 @@ class Jeu {
     }
     this.plateau.cacherDestinations();
     const gagne = this.fin.type !== 'defaite';
-    this.son(gagne ? 'victoire' : 'defaite');
     this.ambiance(gagne ? 'lumineux' : 'sombre');
+    // mode Pro : grandes cinématiques pour la victoire totale et la défaite (js/3d/cinematiques-pro.js)
+    if (this.pro && this.fin.type !== 'victoire' && this.plateau.cineFinPro) {
+      const totale = this.fin.type === 'totale';
+      this.son(totale ? 'victoirePro' : 'defaitePro');
+      await this.cine(() => this.plateau.cineFinPro(totale, (t, x, c) => this.ui.cinemaMaj(t, x, c)),
+        totale ? 'Numéville est libérée !' : 'Le Dark Master l’emporte…',
+        totale ? 'Les six Complices sont sauvés : la ville se rallume, quartier après quartier.' : 'Les lumières de Numéville s’éteignent une à une…',
+        totale ? '#38e1ff' : '#ff3a44');
+      await this.ui.finPartie(this);
+      return;
+    }
+    this.son(gagne ? 'victoire' : 'defaite');
     await this.cine(() => this.plateau.cineFin(gagne),
       gagne ? (this.fin.type === 'totale' ? 'Numéville est libérée !' : 'Numéville résiste !') : 'Le Dark Master l’emporte…',
       gagne ? 'Les Éclaireurs ont propagé les bonnes pratiques dans toute la ville.' : 'La ville reste sous son emprise. La prochaine fois sera la bonne !',
@@ -318,6 +331,7 @@ class Jeu {
   async tour(j) {
     this.joueurActif = j;
     this.ui.majHUD(this);
+    this.ui.annoncerTour(j); // pop-up « C'est ton tour » (ne bloque pas le jeu)
     this.plateau.montrerJoueurActif(j);
     this.plateau.vueJoueur(j);
     const piege = j.piegeClics; j.piegeClics = false;
@@ -332,7 +346,11 @@ class Jeu {
     } else {
       await this.deplacement(j, relais);
     }
-    if (bouge) await this.arriveeCase(j); // on pioche seulement en terminant un déplacement sur la case
+    if (bouge) {
+      await this.arriveeMalus(j);   // mode Pro : toboggan, batterie à plat (avant les cartes : le toboggan déplace le pion)
+      if (!j.toboggan) await this.arriveeCase(j); // on pioche seulement en terminant un déplacement sur la case
+      j.toboggan = false;
+    }
     if (this.fin) return;
     await this.phaseQuestion(j, piege);
     if (this.fin) return;
@@ -347,7 +365,8 @@ class Jeu {
       if (choix === 'de') {
         let n = await this.plateau.lancerDe('blanc');
         n = await this.ajusterDe(j, n, 'blanc');
-        await this.avancer(j, n, `Dé blanc : <b>${n}</b>.`);
+        const jet = await this.proposerJetpack(j, n); // mode Pro : +3 cases en survolant le plateau
+        await this.avancer(j, jet ? n + 3 : n, jet ? `Dé blanc : <b>${n}</b> + Jetpack <b>3</b> = <b>${n + 3}</b>.` : `Dé blanc : <b>${n}</b>.`, { jetpack: jet });
         return;
       }
       if (await this.deplacementAvance(j, choix)) return; // GPS, Plan, Éclaireur rapide, Relais
@@ -357,7 +376,7 @@ class Jeu {
   }
 
   /** Avance de n cases dans le sens choisi (règle de la case occupée incluse). */
-  async avancer(j, n, intro) {
+  async avancer(j, n, intro, opt = {}) {
     const ch = { 1: this.chemin(j, n, 1), [-1]: this.chemin(j, n, -1) };
     const dH = ch[1][ch[1].length - 1], dA = ch[-1][ch[-1].length - 1];
     this.plateau.montrerDestinations([dH, dA], ['#38e1ff', '#ff4fd8']);
@@ -370,7 +389,8 @@ class Jeu {
     if (chemin.length > n) this.ui.log('La case d’arrivée était occupée : le pion avance jusqu’à la prochaine case libre.');
     // la caméra accompagne le pion vers sa case d'arrivée pendant le déplacement
     this.plateau.vueJoueur(j, Math.max(900, chemin.length * 260), this.plateau.posCase(chemin[chemin.length - 1]));
-    await this.plateau.deplacerPion(j, chemin);
+    if (opt.jetpack && this.plateau.volJetpack) await this.plateau.volJetpack(j, chemin);
+    else await this.plateau.deplacerPion(j, chemin);
     j.case = chemin[chemin.length - 1];
     this.ui.log(`🚶 ${this.tagJ(j)} avance de ${n} (${dir === 1 ? 'horaire' : 'anti-horaire'}) et arrive sur ${this.descCase(j.case)}.`);
   }
@@ -453,6 +473,7 @@ class Jeu {
   descCase(idx) {
     const c = NV.BOUCLE[idx];
     if (c.type === 'place') return 'la Place';
+    if (c.malus) return `la case malus « ${NV.PRO.MALUS[c.malus].titre} » (quartier de ${this.nomC(c.c)})`;
     return `${c.type === 'face' ? 'le portrait de ' : 'le quartier de '}${this.nomC(c.c)}`;
   }
 
